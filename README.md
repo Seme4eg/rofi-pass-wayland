@@ -3,8 +3,6 @@
 A bash script to handle [Simple Password Store](http://www.passwordstore.org/)
 in a convenient way using [rofi](https://github.com/lbonn/rofi).
 
-![rofi-pass](https://53280.de/rofi/rofi-pass.png "rofi-pass in action")
-
 ## Features
 
 * Open URLs of entries with hotkey
