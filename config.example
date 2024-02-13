@@ -3,14 +3,14 @@
 # root=/path/to/root
 
 # rofi command. Make sure to have "$@" as last argument
-_rofi () {
-    rofi -i -no-auto-select "$@"
-}
+# _rofi () {
+# 	rofi -no-auto-select -i -dmenu "$@"
+# }
 
 # default command to generate passwords
-_pwgen () {
-	pwgen -y "$@"
-}
+# _pwgen () {
+# 	pwgen -y "$@"
+# }
 
 # image viewer to display qrcode of selected entry
 # qrencode is needed to generate the image and a viewer
@@ -20,15 +20,9 @@ _image_viewer () {
 #    display
 }
 
-# xdotool needs the keyboard layout to be set using setxkbmap
-# You can do this in your autostart scripts (e.g. xinitrc)
-
-# If for some reason, you cannot do this, you can set the command here.
-# and set fix_layout to true
-fix_layout=false
-
-layout_cmd () {
-  setxkbmap us
+# wrapper for notify command, used if 'notify' option is set to 'true'
+_notify () {
+	notify-send -e "rofi-pass" "$1"
 }
 
 # fields to be used
@@ -47,7 +41,7 @@ type_delay=12
 
 ## Programs to be used
 # Editor
-EDITOR='gvim -f'
+EDITOR='vim -x'
 
 # Browser
 BROWSER='xdg-open'
@@ -58,10 +52,6 @@ default_do='menu' # menu, autotype, copyPass, typeUser, typePass, copyUser, copy
 auto_enter='false'
 notify='false'
 default_autotype='user :tab pass'
-
-# color of the help messages
-# leave empty for autodetection
-help_color="#4872FF"
 
 # Clipboard settings
 # Possible options: primary, clipboard, both
@@ -97,13 +87,3 @@ type_menu="Alt+t"
 help="Alt+h"
 switch="Alt+x"
 insert_pass="Alt+n"
-
-# Change the clipboard backend for rofi-pass, valid backends are:
-# xclip
-# wl-clipboard
-#clibpoard_backend=xclip
-
-# Change the backend for rofi-pass, valid backends are:
-# xdotool
-# wtype
-#backend=xdotool
