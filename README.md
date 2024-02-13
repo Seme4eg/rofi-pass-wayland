@@ -1,7 +1,7 @@
-# rofi-pass
+# rofi-pass-wayland
 
 A bash script to handle [Simple Password Store](http://www.passwordstore.org/)
-in a convenient way using [rofi](https://github.com/DaveDavenport/rofi).
+in a convenient way using [rofi](https://github.com/lbonn/rofi).
 
 ![rofi-pass](https://53280.de/rofi/rofi-pass.png "rofi-pass in action")
 
@@ -71,29 +71,14 @@ in a convenient way using [rofi](https://github.com/DaveDavenport/rofi).
 * The field names for `user`, `url` and `autotype` are configurable
 * Bookmarks mode (open stored URLs in browser, default: Alt+x)
 * Share common used passwords between several entries (with different URLs, usernames etc)
-* Change backend with environment variable `ROFI_PASS_BACKEND`, valid
-  backends are `xdotool` or `wtype`. For example use `rofi-pass` with
-  [wtype](https://github.com/atx/wtype):
 
-  ```
-  ROFI_PASS_BACKEND=wtype rofi-pass
-  ```
-
-  or
-
-  ```
-  ROFI_PASS_BACKEND=wtype ROFI_PASS_CLIPBOARD_BACKEND=wl-clipboard rofi-pass
-  ```
-
-  Alternative change the backend in the config file using
-  `backend=wtype` or `clibpoard_backend=wl-clipboard`.
 ## Requirements
 
 * [pass](http://www.passwordstore.org/)
 * sed
 * [rofi](https://github.com/DaveDavenport/rofi)
-* xdotool or wtype
-* xclip or wl-clipboard
+* wtype
+* wl-clipboard
 * gawk
 * bash 4.x
 * find
@@ -167,11 +152,6 @@ For example with this password file path : `web/fsf.org/rms` rofi-pass will user
 To get this, you need to set `default_user` to `:filename` in your configuration.
 
 ## FAQ
-
-### rofi pass prints garbage instead of my actual passes
-
-Make sure to run `setxkbmap <language> <variant>` at the start of your Xorg
-session.
 
 ### rofi pass hangs after selecting password
 
