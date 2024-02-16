@@ -181,8 +181,8 @@ generateQrCode() {
 
 openURL () {
 	local passentry="$1"
-	url=$(PASSWORD_STORE_DIR="${root}" pass "$passentry" |
-			  grep "${URL_field}: " | gawk '{sub(/:/,"")}{print $2}1' | head -1)
+	url=$(pass "$passentry" | grep "${URL_field}: " |
+			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
 	[ -z "$url" ] && exit
 	$BROWSER "$url"
 
@@ -225,8 +225,7 @@ generateOTP () {
 
 	# First, we check if there is a non-conventional OTP command in the pass file
 	_check_otp_cmd() {
-		PASSWORD_STORE_DIR="${root}" pass "$passentry" |
-			grep -q "${OTPmethod_field}: "
+		pass "$passentry" | grep -q "${OTPmethod_field}: "
 	}
 
 	if _check_otp_cmd; then
@@ -234,7 +233,7 @@ generateOTP () {
 		bash -c "$(_check_otp_cmd)"
 	else
 		# If there is no method defined, fallback to pass-otp
-		PASSWORD_STORE_DIR="${root}" pass otp "$passentry"
+		pass otp "$passentry"
 	fi
 
 	clearUp
@@ -380,12 +379,12 @@ mainMenu () {
 
 		# get an array of password file fields like url: user: and custom ones
 		local -a password_temp
-		mapfile -t password_temp < <(PASSWORD_STORE_DIR="${root}" pass show "$passentry")
+		mapfile -t password_temp < <(pass show "$passentry")
 		password=${password_temp[0]}
 
 		if [[ ${password} == "#FILE="* ]]; then
 			pass_file="${password#*=}"
-			mapfile -t password_temp2 < <(PASSWORD_STORE_DIR="${root}" pass show "${pass_file}")
+			mapfile -t password_temp2 < <(pass show "${pass_file}")
 			password=${password_temp2[0]}
 		fi
 
@@ -462,7 +461,6 @@ mainMenu () {
 
 	clearUp
 }
-
 
 clearUp () {
 	password=''
@@ -568,7 +566,7 @@ actionMenu () {
 showEntry () {
 	local password=$1
 	if [[ -z $pass_content ]]; then
-		pass_temp=$(PASSWORD_STORE_DIR="${root}" pass show "$password")
+		pass_temp=$(pass show "$password")
 		password="${pass_temp%%$'\n'*}"
 		pass_key_value=$(printf '%s\n' "${pass_temp}" | tail -n+2 | grep ': ')
 		declare -A stuff
@@ -622,14 +620,14 @@ showEntry () {
 manageEntry () {
 	local passentry="$1"
 	if [[ "$2" == "edit" ]]; then
-		EDITOR=$EDITOR PASSWORD_STORE_DIR="${root}" pass edit "${passentry}"
+		pass edit "${passentry}"
 	elif [[ "$2" == "move" ]]; then
 		cd "${root}" || exit
 		group_array=(*/)
 		group=$(printf '%s\n' "${group_array[@]%/}" | _rofi -p "Choose Group > ")
 		assert_status $?
 
-		PASSWORD_STORE_DIR="${root}" pass mv "$passentry" "${group}"
+		pass mv "$passentry" "$path"
 
 	elif [[ "$2" == "copy" ]]; then
 		cd "${root}" || exit
@@ -647,7 +645,7 @@ manageEntry () {
 		ask=$(printf '%s\n' "${ask_content[@]}" | _rofi -mesg "${HELP}" -p "Are You Sure? > ")
 
 		case $ask in
-			"Yes") PASSWORD_STORE_DIR="${root}" pass rm --force "${passentry}" ;;
+			"Yes") pass rm --force "${passentry}" ;;
 			"No") mainMenu ;;
 			*) exit ;;
 		esac
@@ -657,8 +655,7 @@ manageEntry () {
 }
 
 edit_pass() {
-    [[ $edit_new_pass == "true" ]] &&
-		PASSWORD_STORE_DIR="${root}" pass edit "${1}"
+    [[ $edit_new_pass == "true" ]] && pass edit "${1}"
 }
 
 insertPass () {
@@ -698,7 +695,7 @@ insertPass () {
 	local pass_name="$name"
 
 	printf '%s\n' "${pass_content[@]}" |
-		PASSWORD_STORE_DIR="${root}" pass insert -m "${pass_name}" > /dev/null && edit_pass "${pass_name}"
+		pass insert -m "${pass_name}" > /dev/null && edit_pass "${pass_name}"
 }
 
 help_msg () {
@@ -755,6 +752,9 @@ main () {
 
 	# check for BROWSER variable, use xdg-open as fallback
 	[[ -z $BROWSER ]] && export BROWSER=xdg-open
+
+	# if user has defined his own editor in config file - use it for this script
+	[[ -n $EDITOR ]] && export EDITOR=$EDITOR
 
 	set_roots "$@"
 
