@@ -527,11 +527,10 @@ generatePass () {
 
 	symbols_content=("yes" "no" "cancel")
 	placeholder=$(wrap_placeholder "Use symbols?")
-	symbols=$(printf '%s\n' "${symbols_content[@]}" | _rofi -theme-str "$placeholder")
+	use_symbols=$(printf '%s\n' "${symbols_content[@]}" | _rofi -theme-str "$placeholder")
 	assert_status $?
 
-	case $symbols in
-		yes) symbols="" ;;
+	case $use_symbols in
 		no) symbols="-n" ;;
 		cancel) mainMenu ;;
 	esac
@@ -542,7 +541,9 @@ generatePass () {
 
 	[ -z "$length" ] && length="$password_length"
 
-	pass generate "${symbols}" -i "$passentry" "${length}" > /dev/null;
+	# REVIEW: prompt for -c flag?
+	# don't quote symbols
+	pass generate $symbols -c -i "$passentry" "$length" > /dev/null
 }
 
 showEntry () {
