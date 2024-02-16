@@ -4,18 +4,6 @@
 # (c) 2015 Rasmus Steinke <rasi@xssn.at>
 basecommand="$0"
 
-_rofi () {
-	rofi -no-auto-select -i -dmenu "$@"
-}
-
-_pwgen () {
-	pwgen -y "$@"
-}
-
-_image_viewer () {
-	feh -
-}
-
 config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 # We expect to find these fields in pass(1)'s output
@@ -59,10 +47,10 @@ qrcode="Alt+q"
 previous_root="Shift+Left"
 next_root="Shift+Right"
 
-# Safe permissions
-umask 077
+_rofi () {
+	rofi -no-auto-select -i -dmenu "$@"
+}
 
-# Backends for clipboard manipulation
 clip_in_primary() {
 	wl-copy -p
 }
@@ -71,24 +59,8 @@ clip_in_clipboard() {
 	wl-copy
 }
 
-clip_out_primary() {
-	wl-paste -p
-}
-
-clip_out_clipboard() {
-	wl-paste
-}
-
-# Backends for typing what's in stdin
-
 do_type() {
 	wtype -d ${type_delay} -
-}
-
-# Backends for pressing the key specified by the first argument ($1)
-
-do_press_key() {
-	wtype -P "$1" -p "$1"
 }
 
 notify_on() {
@@ -129,13 +101,18 @@ doClip () {
 	case "$clip" in
 		"primary") clip_in_primary ;;
 		"clipboard") clip_in_clipboard ;;
-		"both") clip_in_primary; clip_out_primary | clip_in_clipboard;;
+		"both") clip_in_primary; wl-paste -p | clip_in_clipboard;;
 	esac
 }
 
 
 autopass () {
 	local passentry="$1"
+
+	do_press_key() {
+		wtype -P "$1" -p "$1"
+	}
+
 	for word in ${stuff["$AUTOTYPE_field"]}; do
 		case "$word" in
 			":tab") do_press_key Tab;;
@@ -158,6 +135,10 @@ autopass () {
 	clearUp
 }
 
+_image_viewer () {
+	# feh -
+}
+
 generateQrCode() {
 	local passentry="$1"
 
@@ -167,6 +148,7 @@ generateQrCode() {
 		"${basecommand}"
 	fi
 
+	# FIXME: display qrcode in rofi right away
 	pass "$passentry" | head -n 1 | qrencode -d 300 -v 8 -l H -o - |
 		_image_viewer
 
@@ -345,7 +327,6 @@ mainMenu () {
 			# Shift+<Left|Right> are otherwise taken by rofi.
 			-kb-mode-previous ""
 			-kb-mode-next ""
-			-select "$entry"
 			-p "> "
 		)
 
@@ -541,14 +522,14 @@ copyMenu () {
 
 # receives current password entry as a parameter
 actionMenu () {
-	local ret="< Return"
-	local move="1 Move Password File"
-	local copy="2 Copy Password File"
-	local delete="3 Delete Password File"
-	local edit="4 Edit Password File"
-	local generate="5 Generate New Password"
+	local move="Move"
+	local copy="Copy"
+	local delete="Delete"
+	local edit="Edit"
+	local generate="Generate new"
+	local ret="Back"
 
-	actions=("$ret" "---" "$move" "$copy" "$delete" "$edit" "$generate")
+	actions=("$move" "$copy" "$delete" "$edit" "$generate" "$ret")
 
 	action=$(printf '%s\n' "${actions[@]}" | _rofi -p "Choose Action > ")
 
@@ -613,7 +594,6 @@ showEntry () {
 
 	unset stuff
 	unset password
-	unset stuff
 	exit
 }
 
@@ -658,8 +638,12 @@ edit_pass() {
     [[ $edit_new_pass == "true" ]] && pass edit "${1}"
 }
 
+_pwgen () {
+	pwgen -y "$@"
+}
+
 insertPass () {
-	url=$(clip_out_clipboard)
+	url=$(wl-paste)
 
 	if [[ "${url:0:4}" == "http" ]]; then
 		domain_name="$(printf '%s\n' "${url}" | awk -F / '{l=split($3,a,"."); \
@@ -729,11 +713,10 @@ get_config_file () {
 	done
 }
 
+# FIXME: either don't globalise or make the roots logic more clear
 set_roots () {
 	if [[ -n "$2" && "$1" == "--root" ]]; then
 		custom_root=true; IFS=: read -r -a roots <<< "$2"
-	elif [[ -n $root ]]; then
-		custom_root=true; IFS=: read -r -a roots <<< "${root}"
 	elif [[ -n ${PASSWORD_STORE_DIR} ]]; then
 		roots=("${PASSWORD_STORE_DIR}")
 	else
