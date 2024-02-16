@@ -674,8 +674,7 @@ insertPass () {
 	fi
 
 	cd "${root}" || exit
-	group_array=(*/)
-	grouplist=$(printf '%s\n' "${group_array[@]%/}")
+
 	name="$(listgpg | \
 		_rofi -format 'f' -filter "${domain_name}" -mesg "${help_content}" -p "> ")"
 	assert_status $?
@@ -683,10 +682,6 @@ insertPass () {
 	user_content=("${default_user2}" "${USER}" "${default_user}")
 	user=$(printf '%s\n' "${user_content[@]}" | \
 		_rofi -mesg "Chose Username or type" -p "> ")
-	assert_status $?
-
-	group_content=("No Group" "---" "${grouplist}")
-	group=$(printf '%s\n' "${group_content[@]}" | _rofi -p "Choose Group > ")
 	assert_status $?
 
 	message="Type Password or hit Enter to generate one"
@@ -701,8 +696,6 @@ insertPass () {
 	[[ $url == http* ]] && pass_content+=("${URL_field}: ${url}")
 
 	local pass_name="$name"
-
-	[[ "$group" == "No Group" ]] && pass_name="${group}/${name}"
 
 	printf '%s\n' "${pass_content[@]}" |
 		PASSWORD_STORE_DIR="${root}" pass insert -m "${pass_name}" > /dev/null && edit_pass "${pass_name}"
