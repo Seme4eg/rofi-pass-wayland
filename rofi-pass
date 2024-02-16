@@ -6,27 +6,49 @@ basecommand="$0"
 
 config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
-# We expect to find these fields in pass(1)'s output
+# --- Config defaults (in case user doesn't copies one) ---
+
+# permanently set alternative root dir. Use ":" to separate multiple roots
+# which can be switched at runtime with shift+left/right
+# root=/path/to/root
+
+# Fields to be used
 URL_FIELD='url'
 USERNAME_FIELD='user'
 AUTOTYPE_FIELD='autotype'
-OTPmethod_field='otp_method'
+OTPMETHOD_FIELD='otp_method'
 
-default_autotype="user :tab pass"
+BACK_OPTION='< back'
+
+## Programs to be used
+EDITOR='vim -x' # Editor
+BROWSER='xdg-open' # Browser
+
+# delay to be used for :delay keyword
 delay=2
+# rofi-pass needs to close itself before it can type passwords. Set delay here.
 wait=0.2
+# delay between keypresses when typing (in ms)
 type_delay=12
-edit_new_pass="true"
-# menu, copyPass, typeUser, typePass, copyUser, copyUrl, showEntry, typeMenu,
-# actionMenu, copyMenu, openUrl
-default_do='menu'
-auto_enter='false'
-notify='false'
+
+# Clipboard settings
+# Possible options: primary, clipboard, both
 clip=primary
+# Seconds before clearing pass from clipboard
 clip_clear=45
+
+## Options for generating new password entries
+# open new password entries in editor
+edit_new_pass="true"
 default_user="${ROFI_PASS_DEFAULT_USER-$(whoami)}"
 default_user2=john_doe
 password_length=12
+
+## Misc settings
+
+default_autotype="user :tab pass"
+auto_enter='false'
+notify='false'
 
 # default shortcuts
 autotype="Alt+1"
@@ -47,6 +69,8 @@ insert_pass="Alt+n"
 qrcode="Alt+q"
 previous_root="Shift+Left"
 next_root="Shift+Right"
+
+# --- END Config defaults ---
 
 _rofi () {
 	rofi -no-auto-select -i -dmenu "$@"
