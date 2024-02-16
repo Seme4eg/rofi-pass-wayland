@@ -383,8 +383,6 @@ mainMenu () {
 		fi
 	fi
 
-	pass_content="$(for key in "${!stuff[@]}"; do printf '%s\n' "${key}: ${stuff[$key]}"; done)"
-
 	# actions based on keypresses
 	# The exit code for -kb-custom-X is X+9.
 	case "${rofi_exit}" in
@@ -548,57 +546,25 @@ generatePass () {
 }
 
 showEntry () {
-	local password=$1
+	local -a lines
+	local pass_content
 
-	if [[ -z $pass_content ]]; then
-		pass_temp=$(pass show "$password")
-		password="${pass_temp%%$'\n'*}"
-		pass_key_value=$(printf '%s\n' "${pass_temp}" | tail -n+2 | grep ': ')
-		declare -A stuff
+	for key in "${!stuff[@]}"; do lines+=("${key}: ${stuff[$key]}"); done
+	pass_content="$(printf '%s\n' "${lines[@]}")"
 
-		while read -r LINE; do
-			_id="${LINE%%: *}"
-			_val="${LINE#* }"
-			stuff["${_id}"]=${_val}
-		done < <(printf '%s\n' "${pass_key_value}")
-
-		stuff["pass"]=${password}
-
-		if test "${stuff['autotype']+autotype}"; then
-			:
-		else
-			stuff["autotype"]="${USERNAME_FIELD} :tab pass"
-		fi
-
-		pass_content="$(for key in "${!stuff[@]}"; do printf '%s\n' "${key}: ${stuff[$key]}"; done)"
-	fi
-
-	bla_content=("< Return" "${pass_content}")
+	content=("$BACK_OPTION" "${pass_content}")
 	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
-	bla=$(printf '%s\n' "${bla_content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
+	selection=$(printf '%s\n' "${content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
 
-	word=$(printf '%s' "$bla" | gawk -F': ' '{print $1}')
+	field=$(printf '%s' "$selection" | cut -d':' -f 1)
 
-	if [[ ${bla} == "< Return" ]]; then
-		mainMenu
-	else
-		if [[ -z $(printf '%s' "${stuff[${word}]}") ]]; then
-			printf '%s' "$word" | doClip
-		else
-			printf '%s' "${stuff[${word}]}" | doClip
-		fi
-
-		notify_on &&
-			_notify "Copied Password\\nClearing in $clip_clear seconds"
-
-		clearClip &
-
-		exit
-	fi
+	case $field in
+		"$BACK_OPTION") mainMenu ;;
+		*) copy "$field" ;;
+	esac
 
 	unset stuff
-	unset password
 	exit
 }
 
