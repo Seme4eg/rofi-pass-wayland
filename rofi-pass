@@ -7,16 +7,17 @@ basecommand="$0"
 config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 # We expect to find these fields in pass(1)'s output
-URL_field='url'
-USERNAME_field='user'
-AUTOTYPE_field='autotype'
+URL_FIELD='url'
+USERNAME_FIELD='user'
+AUTOTYPE_FIELD='autotype'
 OTPmethod_field='otp_method'
 
 default_autotype="user :tab pass"
 delay=2
 wait=0.2
 type_delay=12
-# menu, copyPass, typeUser, typePass, copyUser, copyUrl, viewEntry, typeMenu,
+edit_new_pass="true"
+# menu, copyPass, typeUser, typePass, copyUser, copyUrl, showEntry, typeMenu,
 # actionMenu, copyMenu, openUrl
 default_do='menu'
 auto_enter='false'
@@ -105,38 +106,55 @@ doClip () {
 	esac
 }
 
-
-autopass () {
+# FIXME: when done with removing global state, rewrite this func to subshell
+# func() () so the inner vars remain within this subshell
+type() {
 	local passentry="$1"
+	local field="$2"
 
-	do_press_key() {
-		wtype -P "$1" -p "$1"
+	# local autopass
+	autopass () {
+		do_press_key() {
+			wtype -P "$1" -p "$1"
+		}
+
+		for word in ${stuff["$AUTOTYPE_FIELD"]}; do
+			case "$word" in
+				":tab") do_press_key Tab ;;
+				":space") do_press_key space ;;
+				":delay") sleep "${delay}" ;;
+				":enter") do_press_key Return ;;
+				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+				"pass") printf '%s' "${password}" | do_type ;;
+				"path")
+					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
+					;;
+				*) printf '%s' "${stuff[${word}]}" | do_type ;;
+			esac
+		done
+
+		[[ ${auto_enter} == "true" ]] && do_press_key Return
 	}
 
-	for word in ${stuff["$AUTOTYPE_field"]}; do
-		case "$word" in
-			":tab") do_press_key Tab;;
-			":space") do_press_key space;;
-			":delay") sleep "${delay}";;
-			":enter") do_press_key Return;;
-			":otp") printf '%s' "$(generateOTP "$passentry")" | do_type;;
-			"pass") printf '%s' "${password}" | do_type;;
-			"path")
-				printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
-				;;
-			*) printf '%s' "${stuff[${word}]}" | do_type;;
-		esac
-	done
+	sleep $wait
 
-	if [[ ${auto_enter} == "true" ]]; then
-		do_press_key Return
-	fi
+	case "$field" in
+		user) printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
+		pass) printf '%s' "${password}" | do_type ;;
+		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+		"$AUTOTYPE_FIELD") autopass ;;
+		*) printf '%s' "${stuff[${field}]}" | do_type ;;
+	esac
+
+	# TODO: figure out better notifications coverage
+	# notify_on || [[ "${stuff[notify]}" == "true" ]] &&
+	# 	_notify "finished typing password";
 
 	clearUp
 }
 
 _image_viewer () {
-	# feh -
+	feh -
 }
 
 generateQrCode() {
@@ -163,41 +181,10 @@ generateQrCode() {
 
 openURL () {
 	local passentry="$1"
-	url=$(pass "$passentry" | grep "${URL_field}: " |
+	url=$(pass "$passentry" | grep "${URL_FIELD}: " |
 			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
 	[ -z "$url" ] && exit
 	$BROWSER "$url"
-
-	clearUp
-}
-
-typeUser () {
-	printf '%s' "${stuff[${USERNAME_field}]}" | do_type
-	clearUp
-}
-
-typePass () {
-	printf '%s' "${password}" | do_type
-
-	if notify_on || [[ "${stuff[notify]}" == "true" ]]; then
-		_notify "finished typing password";
-	fi
-
-	clearUp
-}
-
-typeField () {
-	local to_type
-	local passentry="$1"
-
-	case $typefield in
-		"OTP") to_type="$(generateOTP "$passentry")" ;;
-		*) to_type="${stuff[${typefield}]}" ;;
-	esac
-
-	printf '%s' "$to_type" | do_type
-
-	unset to_type
 
 	clearUp
 }
@@ -221,24 +208,11 @@ generateOTP () {
 	clearUp
 }
 
-copyField () {
-	printf '%s' "${stuff[$1]}" | doClip
-	clearUp
-}
-
 clearClip() {
 	sleep $clip_clear
 	printf '%s' "" | clip_in_primary
 	printf '%s' "" | clip_in_clipboard
 	notify_on && _notify "Clipboard cleared"
-}
-
-copyPass () {
-	printf '%s' "$password" | doClip
-	notify_on &&
-		_notify "Copied Password\\nClearing in $clip_clear seconds"
-
-	clearClip &
 }
 
 wrap_placeholder() {
@@ -355,22 +329,17 @@ mainMenu () {
 			if test "${stuff['autotype']+autotype}"; then
 				:
 			else
-				stuff["autotype"]="${USERNAME_field} :tab pass"
+				stuff["autotype"]="${USERNAME_FIELD} :tab pass"
 			fi
 		fi
 	fi
 
-	if [[ -z "${stuff["${AUTOTYPE_field}"]}" ]]; then
-		if [[ -n $default_autotype ]]; then
-			stuff["${AUTOTYPE_field}"]="${default_autotype}"
-		fi
-	fi
-	if [[ -z "${stuff["${USERNAME_field}"]}" ]]; then
+	if [[ -z "${stuff["${USERNAME_FIELD}"]}" ]]; then
 		if [[ -n $default_user ]]; then
 			if [[ "$default_user" == ":filename" ]]; then
-				stuff["${USERNAME_field}"]="$(basename "$passentry")"
+				stuff["${USERNAME_FIELD}"]="$(basename "$passentry")"
 			else
-				stuff["${USERNAME_field}"]="${default_user}"
+				stuff["${USERNAME_FIELD}"]="${default_user}"
 			fi
 		fi
 	fi
@@ -381,18 +350,18 @@ mainMenu () {
 	# The exit code for -kb-custom-X is X+9.
 	case "${rofi_exit}" in
 		0) typeMenu "$passentry";;
-		10) sleep $wait; autopass "$passentry";;
-		11) sleep $wait; typeUser;;
-		12) sleep $wait; typePass;;
+		10) type "$passentry" "$AUTOTYPE_FIELD" ;;
+		11) type "$passentry" "$USERNAME_FIELD" ;;
+		12) type "$passentry" 'pass'  ;;
 		13) openURL "$passentry" ;;
-		14) copyField $USERNAME_field ;;
-		15) copyPass;;
+		14) copy $USERNAME_FIELD ;;
+		15) copy 'pass' ;;
 		16) showEntry "$passentry";;
-		17) copyField $URL_field ;;
+		17) copy $URL_FIELD ;;
 		18) default_do="menu" typeMenu "$passentry";;
-		21) sleep $wait; typefield=OTP; typeField "$passentry";;
+		21) type "$passentry" 'OTP' ;;
 		23) actionMenu "$passentry";;
-		24) copyMenu;;
+		24) copy 'menu' ;;
 		27) insertPass;;
 		28) generateQrCode "$passentry";;
 	esac
@@ -437,45 +406,67 @@ EOM
 
 typeMenu () {
 	local passentry="$1"
-	if [[ -n $default_do ]]; then
-		if [[ $default_do == "menu" ]]; then
+
+	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
+
+	case $default_do in
+		"${AUTOTYPE_FIELD}") type "$passentry" "$AUTOTYPE_FIELD" ;;
+		"" | "menu")
 			local -a keys=("${!stuff[@]}")
-			keys=("${keys[@]/$AUTOTYPE_field}")
-			placeholder=$(wrap_placeholder "Field to type")
-			# FIXME: ???
-			typefield=$({ printf '%s' "${AUTOTYPE_field}" ; printf '%s\n' "${keys[@]}" |
-							  sort; } | _rofi -theme-str "$placeholder")
+			# remove autotype field from keys array
+			keys=("${keys[@]/$AUTOTYPE_FIELD}")
+
+			placeholder=$(wrap_placeholder "Field to autotype")
+
+			local sorted_typefields=()
+			# grep is needed cuz after 'autotype' field gets cleared from the
+			# array above, indecies do not update and we get an empty element.
+			# So it's needed to filter out empty strings
+			mapfile -t sorted_typefields < <(printf '%s\n' "${keys[@]}" |
+												 sort | grep -v "^$")
+			sorted_typefields+=("${AUTOTYPE_FIELD}")
+
+			local typefield
+			typefield=$(printf '%s\n' "${sorted_typefields[@]}" |
+							_rofi -theme-str "$placeholder")
 
 			assert_status $?
 
 			case "$typefield" in
-				'') exit;;
-				'pass') sleep $wait; typePass;;
-				"${AUTOTYPE_field}") sleep $wait; autopass "$passentry";;
-				*) sleep $wait; typeField "$passentry"
+				'') exit ;;
+				*) type "$passentry" "$typefield"
 			esac
-
-			clearUp
-
-		elif [[ $default_do == "${AUTOTYPE_field}" ]]; then
-			sleep $wait; autopass "$passentry"
-		else
-			${default_do}
-		fi
-	fi
+		;;
+		*) ${default_do} ;;
+	esac
 }
 
-copyMenu () {
-	placeholder=$(wrap_placeholder "Field to copy")
-	copyfield=$(printf '%s\n' "${!stuff[@]}" | sort |
-					_rofi -theme-str "$placeholder")
+copy() {
+	local field="$1"
+	case $field in
+		# i doubt anyone will have 'menu' field in their password file
+		menu)
+			placeholder=$(wrap_placeholder "Field to copy")
+			# TODO: utilize logic that already is in 'typeMenu' func - get sorted out
+			# fields without 'autotype' one
+			field=$(printf '%s\n' "${!stuff[@]}" | sort |
+							_rofi -theme-str "$placeholder")
 
-	assert_status $?
+			assert_status $?
 
-	case $copyfield in
-		"pass") copyPass ;;
-		*) copyField "$copyfield" ;;
+			copy "$field"
+		;;
+		"pass")
+			printf '%s' "$password" | doClip
+			clearClip &
+			;;
+		*) printf '%s' "${stuff[$field]}" | doClip ;;
 	esac
+
+	# TODO:
+	# notify_on &&
+	# 	_notify "Copied Password\\nClearing in $clip_clear seconds"
 
 	clearUp
 }
@@ -542,6 +533,7 @@ generatePass () {
 
 showEntry () {
 	local password=$1
+
 	if [[ -z $pass_content ]]; then
 		pass_temp=$(pass show "$password")
 		password="${pass_temp%%$'\n'*}"
@@ -559,7 +551,7 @@ showEntry () {
 		if test "${stuff['autotype']+autotype}"; then
 			:
 		else
-			stuff["autotype"]="${USERNAME_field} :tab pass"
+			stuff["autotype"]="${USERNAME_FIELD} :tab pass"
 		fi
 
 		pass_content="$(for key in "${!stuff[@]}"; do printf '%s\n' "${key}: ${stuff[$key]}"; done)"
@@ -673,8 +665,8 @@ insertPass () {
 
 	clear
 
-	pass_content=("${pw}" "---" "${USERNAME_field}: ${user}")
-	[[ $url == http* ]] && pass_content+=("${URL_field}: ${url}")
+	pass_content=("${pw}" "---" "${USERNAME_FIELD}: ${user}")
+	[[ $url == http* ]] && pass_content+=("${URL_FIELD}: ${url}")
 
 	local pass_name="$name"
 
