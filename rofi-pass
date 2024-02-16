@@ -233,7 +233,7 @@ generateOTP () {
 
 	# First, we check if there is a non-conventional OTP command in the pass file
 	_check_otp_cmd() {
-		pass "$passentry" | grep -q "${OTPmethod_field}: "
+		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
 	}
 
 	if _check_otp_cmd; then
@@ -352,7 +352,7 @@ mainMenu () {
 			while read -r LINE; do
 				unset _id _val
 				case "$LINE" in
-					"otpauth://"*|"${OTPmethod_field}"*)
+					"otpauth://"*|"${OTPMETHOD_FIELD}"*)
 						_id="OTP"
 						_val=""
 						;;
@@ -483,6 +483,9 @@ copy() {
 	# notify_on &&
 	# 	_notify "Copied Password\\nClearing in $clip_clear seconds"
 
+	# REVIEW: maybe always clear clip?
+	# clearClip &
+
 	clearUp
 }
 
@@ -493,9 +496,8 @@ actionMenu () {
 	local delete="Delete"
 	local edit="Edit"
 	local generate="Generate new"
-	local ret="Back"
 
-	actions=("$move" "$copy" "$delete" "$edit" "$generate" "$ret")
+	actions=("$move" "$copy" "$delete" "$edit" "$generate" "$BACK_OPTION")
 
 	placeholder=$(wrap_placeholder "Choose action")
 	action=$(printf '%s\n' "${actions[@]}" | _rofi -theme-str "$placeholder")
@@ -506,25 +508,24 @@ actionMenu () {
 		"$copy") manageEntry "$1" copy ;;
 		"$edit") manageEntry "$1" edit ;;
 		"$generate") generatePass "$1" ;;
-		"$ret") mainMenu ;;
+		"$BACK_OPTION") mainMenu ;;
 		*) exit ;;
 	esac
 }
 
 generatePass () {
 	local passentry="$1"
-	askmenu_content=("Yes" "No")
+	askmenu_content=("yes" "no")
 	placeholder=$(wrap_placeholder "Generate new password for ${passentry}?")
-	askGenMenu=$(printf '%s\n' "${askmenu_content[@]}" |
+	generatep=$(printf '%s\n' "${askmenu_content[@]}" |
 					 _rofi -theme-str "$placeholder" )
 
 	assert_status $?
 
-	if [[ $askGenMenu == "Yes" ]]; then
-		true
-	elif [[ $askGenMenu == "No" ]]; then
-		actionMenu "$1"
-	fi
+	case $generatep in
+		yes) true ;;
+		no) actionMenu "$1" ;;
+	esac
 
 	symbols_content=("yes" "no" "cancel")
 	placeholder=$(wrap_placeholder "Use symbols?")
@@ -698,8 +699,6 @@ help_msg () {
 	--insert         insert new entry to password store
 	--root           set custom root directories (colon separated)
 	--bmarks         start in bookmarks mode
-
-	rofi-pass version 1.5.3
 EOF
 }
 
@@ -748,9 +747,11 @@ main () {
 
 	set_roots "$@"
 
+	# TODO: see which flags make sence to be added here instead of deprecated
+	# 'default_do'
+	# menu, copy menu, type menu, showEntry, actionMenu, openUrl
 	case $1 in
 		--insert) insertPass ;;
-		--root) mainMenu ;;
 		--help) help_msg ;;
 		--bmarks) mainMenu --bmarks; ;;
 		*) mainMenu ;;
