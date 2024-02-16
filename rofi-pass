@@ -241,59 +241,16 @@ copyPass () {
 	clearClip &
 }
 
-viewEntry () {
-	showEntry "$1"
-}
-
-generatePass () {
-	local passentry="$1"
-	askmenu_content=("Yes" "No")
-	askGenMenu=$(printf '%s\n' "${askmenu_content[@]}" |
-					 _rofi -p "Generate new Password for ${selected_password}? > ")
-
-	assert_status $?
-
-	if [[ $askGenMenu == "Yes" ]]; then
-		true
-	elif [[ $askGenMenu == "No" ]]; then
-		actionMenu "$1"
-	fi
-
-	symbols_content=("0  Cancel" "1  Yes" "2  No")
-	symbols=$(printf '%s\n' "${symbols_content[@]}" | _rofi -p "Use Symbols? > ")
-	assert_status $?
-
-	if [[ $symbols == "0  Cancel" ]]; then
-		mainMenu;
-	elif [[ $symbols == "1  Yes" ]]; then
-		symbols="";
-	elif [[ $symbols == "2  No" ]]; then
-		symbols="-n";
-	fi
-
-	HELP="Enter Number or hit Enter to use default length"
-	length=$(printf '%s' "" |
-				 _rofi -mesg "${HELP}" \
-					 -p "Password length? (Default: ${password_length}) > ")
-	assert_status $?
-
-	if [[ $length == "" ]]; then
-		PASSWORD_STORE_DIR="${root}" pass generate ${symbols} -i \
-			"$passentry" "${password_length}" > /dev/null;
-	else
-		PASSWORD_STORE_DIR="${root}" pass generate ${symbols} -i \
-			"$passentry" "${length}" > /dev/null;
-	fi
+wrap_placeholder() {
+	echo "#entry { placeholder: \"$1\"; }"
 }
 
 mainMenu () {
 	local passentry
 	if [[ $1 == "--bmarks" ]]; then
-		passentry="$(list_passwords 2>/dev/null \
-			| _rofi -mesg "Bookmarks Mode. ${switch} to switch" \
-			-kb-custom-10 "${switch}" \
-			-select "$entry" \
-			-p "rofi-pass > ")"
+		placeholder=$(wrap_placeholder "Bookmarks Mode. ${switch} to switch")
+		passentry="$(list_passwords 2>/dev/null | \
+			_rofi -kb-custom-10 "${switch}" -theme-str "$placeholder")"
 
 		case $? in
 			1) exit ;;
@@ -430,7 +387,7 @@ mainMenu () {
 		13) openURL "$passentry" ;;
 		14) copyField $USERNAME_field ;;
 		15) copyPass;;
-		16) viewEntry "$passentry";;
+		16) showEntry "$passentry";;
 		17) copyField $URL_field ;;
 		18) default_do="menu" typeMenu "$passentry";;
 		21) sleep $wait; typefield=OTP; typeField "$passentry";;
@@ -484,8 +441,10 @@ typeMenu () {
 		if [[ $default_do == "menu" ]]; then
 			local -a keys=("${!stuff[@]}")
 			keys=("${keys[@]/$AUTOTYPE_field}")
+			placeholder=$(wrap_placeholder "Field to type")
+			# FIXME: ???
 			typefield=$({ printf '%s' "${AUTOTYPE_field}" ; printf '%s\n' "${keys[@]}" |
-							  sort; } | _rofi -p "Choose Field to type > ")
+							  sort; } | _rofi -theme-str "$placeholder")
 
 			assert_status $?
 
@@ -507,8 +466,9 @@ typeMenu () {
 }
 
 copyMenu () {
+	placeholder=$(wrap_placeholder "Field to copy")
 	copyfield=$(printf '%s\n' "${!stuff[@]}" | sort |
-					_rofi -p "Choose Field to copy > ")
+					_rofi -theme-str "$placeholder")
 
 	assert_status $?
 
@@ -531,7 +491,8 @@ actionMenu () {
 
 	actions=("$move" "$copy" "$delete" "$edit" "$generate" "$ret")
 
-	action=$(printf '%s\n' "${actions[@]}" | _rofi -p "Choose Action > ")
+	placeholder=$(wrap_placeholder "Choose action")
+	action=$(printf '%s\n' "${actions[@]}" | _rofi -theme-str "$placeholder")
 
 	case $action in
 		"$move") manageEntry "$1" move ;;
@@ -542,6 +503,41 @@ actionMenu () {
 		"$ret") mainMenu ;;
 		*) exit ;;
 	esac
+}
+
+generatePass () {
+	local passentry="$1"
+	askmenu_content=("Yes" "No")
+	placeholder=$(wrap_placeholder "Generate new password for ${passentry}?")
+	askGenMenu=$(printf '%s\n' "${askmenu_content[@]}" |
+					 _rofi -theme-str "$placeholder" )
+
+	assert_status $?
+
+	if [[ $askGenMenu == "Yes" ]]; then
+		true
+	elif [[ $askGenMenu == "No" ]]; then
+		actionMenu "$1"
+	fi
+
+	symbols_content=("yes" "no" "cancel")
+	placeholder=$(wrap_placeholder "Use symbols?")
+	symbols=$(printf '%s\n' "${symbols_content[@]}" | _rofi -theme-str "$placeholder")
+	assert_status $?
+
+	case $symbols in
+		yes) symbols="" ;;
+		no) symbols="-n" ;;
+		cancel) mainMenu ;;
+	esac
+
+	placeholder=$(wrap_placeholder "Enter password length (Default: ${password_length})")
+	length=$(printf '%s' "" | _rofi -theme-str "$placeholder")
+	assert_status $?
+
+	[ -z "$length" ] && length="$password_length"
+
+	pass generate "${symbols}" -i "$passentry" "${length}" > /dev/null;
 }
 
 showEntry () {
@@ -570,7 +566,8 @@ showEntry () {
 	fi
 
 	bla_content=("< Return" "${pass_content}")
-	bla=$(printf '%s\n' "${bla_content[@]}" | _rofi -mesg "Enter: Copy entry to clipboard" -p "> ")
+	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
+	bla=$(printf '%s\n' "${bla_content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
 
 	word=$(printf '%s' "$bla" | gawk -F': ' '{print $1}')
@@ -599,30 +596,31 @@ showEntry () {
 
 manageEntry () {
 	local passentry="$1"
+
+	cd "${root}" || exit
+
 	if [[ "$2" == "edit" ]]; then
 		pass edit "${passentry}"
 	elif [[ "$2" == "move" ]]; then
-		cd "${root}" || exit
-		group_array=(*/)
-		group=$(printf '%s\n' "${group_array[@]%/}" | _rofi -p "Choose Group > ")
+		placeholder=$(wrap_placeholder "New path for $passentry")
+		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
 		assert_status $?
 
 		pass mv "$passentry" "$path"
 
 	elif [[ "$2" == "copy" ]]; then
-		cd "${root}" || exit
-		group_array=(*/)
-		group=$(printf '%s\n' "${group_array[@]%/}" | _rofi -p "Choose Group > ")
+		placeholder=$(wrap_placeholder "Path for $passentry copy")
+		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
 		assert_status $?
 
-		message="Copying to same Group. Please enter a name for the new entry"
-		new_name="$(listgpg | _rofi -format 'f' -mesg "$message" -p "> ")"
-		PASSWORD_STORE_DIR="${root}" pass cp "$passentry" "${group}/${new_name}"
+		pass cp "$passentry" "$path"
 
 	elif [[ "$2" == "delete" ]]; then
 		HELP="Selected entry: ${passentry}"
 		ask_content=("Yes" "No")
-		ask=$(printf '%s\n' "${ask_content[@]}" | _rofi -mesg "${HELP}" -p "Are You Sure? > ")
+		placeholder=$(wrap_placeholder "Are You Sure? > ")
+		ask=$(printf '%s\n' "${ask_content[@]}" |
+				  _rofi -mesg "${HELP}" -theme-str "$placeholder")
 
 		case $ask in
 			"Yes") pass rm --force "${passentry}" ;;
@@ -648,26 +646,28 @@ insertPass () {
 	if [[ "${url:0:4}" == "http" ]]; then
 		domain_name="$(printf '%s\n' "${url}" | awk -F / '{l=split($3,a,"."); \
 			print (a[l-1]=="com"?a[l-2] OFS:X) a[l-1] OFS a[l]}' OFS=".")"
-		help_content="Domain: ${domain_name}\nType name, make sure it is unique"
+		help_content="Domain: ${domain_name}"
 	else
-		help_content="Hint: Copy URL to clipboard before calling this menu.
-		Type name, make sure it is unique"
+		help_content="Hint: Copy URL to clipboard before calling this menu."
 	fi
 
 	cd "${root}" || exit
 
-	name="$(listgpg | \
-		_rofi -format 'f' -filter "${domain_name}" -mesg "${help_content}" -p "> ")"
+	placeholder=$(wrap_placeholder "Enter name, must be unique ... ")
+	name=$(listgpg | _rofi -format 'f' -filter "${domain_name}" \
+		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
 	assert_status $?
 
 	user_content=("${default_user2}" "${USER}" "${default_user}")
+	placeholder=$(wrap_placeholder "Enter username")
 	user=$(printf '%s\n' "${user_content[@]}" | \
-		_rofi -mesg "Chose Username or type" -p "> ")
+		_rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
 
 	message="Type Password or hit Enter to generate one"
+	placeholder=$(wrap_placeholder "Password")
 	pw=$(printf '%s' "Generate" | \
-		_rofi -password -p "Password > " -mesg "$message")
+		_rofi -password -theme-str "$placeholder" -mesg "$message")
 
 	[[ $pw == "Generate" ]] && pw=$(_pwgen "${password_length}")
 
