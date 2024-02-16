@@ -136,6 +136,9 @@ type() {
 	local passentry="$1"
 	local field="$2"
 
+	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
+
 	# local autopass
 	autopass () {
 		do_press_key() {
@@ -163,7 +166,19 @@ type() {
 	sleep $wait
 
 	case "$field" in
-		user) printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
+		# doubt anyone will ever have 'menu' field in their pass file
+		"menu")
+			local sorted_fields=()
+			mapfile -t sorted_fields < <(get_sorted_fields)
+			sorted_fields+=("${AUTOTYPE_FIELD}")
+
+			field=$(printf '%s\n' "${sorted_fields[@]}" |
+						_rofi -theme-str "$placeholder")
+			assert_status $?
+
+			type "$passentry" "$field"
+			;;
+		"$USERNAME_FIELD") printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
 		pass) printf '%s' "${password}" | do_type ;;
 		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autopass ;;
@@ -373,16 +388,15 @@ mainMenu () {
 	# actions based on keypresses
 	# The exit code for -kb-custom-X is X+9.
 	case "${rofi_exit}" in
-		0) typeMenu "$passentry";;
+		0 | 18) type "$passentry" 'menu' ;;
 		10) type "$passentry" "$AUTOTYPE_FIELD" ;;
 		11) type "$passentry" "$USERNAME_FIELD" ;;
 		12) type "$passentry" 'pass'  ;;
 		13) openURL "$passentry" ;;
 		14) copy $USERNAME_FIELD ;;
 		15) copy 'pass' ;;
-		16) showEntry "$passentry";;
+		16) showEntry ;;
 		17) copy $URL_FIELD ;;
-		18) default_do="menu" typeMenu "$passentry";;
 		21) type "$passentry" 'OTP' ;;
 		23) actionMenu "$passentry";;
 		24) copy 'menu' ;;
@@ -428,42 +442,19 @@ EOM
 	unset helptext; mainMenu;
 }
 
-typeMenu () {
-	local passentry="$1"
+# Returns sorted keys for current password entry with 'autotype' key removed.
+# Fields like 'user', 'url', etc
+get_sorted_fields() {
+	local -a keys=("${!stuff[@]}")
+	# remove autotype field from keys array
+	keys=("${keys[@]/$AUTOTYPE_FIELD}")
 
-	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
-		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
+	placeholder=$(wrap_placeholder "Field to autotype")
 
-	case $default_do in
-		"${AUTOTYPE_FIELD}") type "$passentry" "$AUTOTYPE_FIELD" ;;
-		"" | "menu")
-			local -a keys=("${!stuff[@]}")
-			# remove autotype field from keys array
-			keys=("${keys[@]/$AUTOTYPE_FIELD}")
-
-			placeholder=$(wrap_placeholder "Field to autotype")
-
-			local sorted_typefields=()
-			# grep is needed cuz after 'autotype' field gets cleared from the
-			# array above, indecies do not update and we get an empty element.
-			# So it's needed to filter out empty strings
-			mapfile -t sorted_typefields < <(printf '%s\n' "${keys[@]}" |
-												 sort | grep -v "^$")
-			sorted_typefields+=("${AUTOTYPE_FIELD}")
-
-			local typefield
-			typefield=$(printf '%s\n' "${sorted_typefields[@]}" |
-							_rofi -theme-str "$placeholder")
-
-			assert_status $?
-
-			case "$typefield" in
-				'') exit ;;
-				*) type "$passentry" "$typefield"
-			esac
-		;;
-		*) ${default_do} ;;
-	esac
+	# grep is needed cuz after 'autotype' field gets cleared from the
+	# array above, indecies do not update and we get an empty element.
+	# So it's needed to filter out empty strings
+	printf '%s\n' "${keys[@]}" | sort | grep -v "^$"
 }
 
 copy() {
@@ -471,10 +462,10 @@ copy() {
 	case $field in
 		# i doubt anyone will have 'menu' field in their password file
 		menu)
+			local sorted_fields=()
+			mapfile -t sorted_fields < <(get_sorted_fields)
 			placeholder=$(wrap_placeholder "Field to copy")
-			# TODO: utilize logic that already is in 'typeMenu' func - get sorted out
-			# fields without 'autotype' one
-			field=$(printf '%s\n' "${!stuff[@]}" | sort |
+			field=$(printf '%s\n' "${sorted_fields[@]}" | sort |
 							_rofi -theme-str "$placeholder")
 
 			assert_status $?
