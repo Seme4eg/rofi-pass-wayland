@@ -13,7 +13,3 @@ indent_style = tab
 
 [*.md]
 trim_trailing_whitespace = false
-
-[*.py]
-indent_style = space
-indent_size = 4

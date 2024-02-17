@@ -120,14 +120,6 @@ addpass --name "My new Site" +user "zeltak" +branch "branch" +custom "foobar" +a
 * `--root` can also be a colon separated list of directories, in which case you can navigate between them on the main menu with Shift+Left and Shift+Right.
 * Fieldnames are defined with `+` and the actual value is defined inside the quotations. You can add as many fields as you like
 
-### keepass2 import script
-
-Also included is an import script for keepass2 databases. It's the same script that can be downloaded from the pass homepage, with some minor modifications to match rofi-pass structure.
-
-### csv exporter
-
-Finally a script to export your pass database to csv is included. The resulting csv was tested in keepassxc.
-
 ## Sharing passwords
 
 Rofi-pass allows you to easily share common used passwords across multiple entries.
