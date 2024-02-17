@@ -2,11 +2,12 @@
 
 # rofi-pass
 # (c) 2015 Rasmus Steinke <rasi@xssn.at>
+
 basecommand="$0"
 
-config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
-
-# --- Config defaults (in case user doesn't copies one) ---
+###############################################################################
+#              Config defaults (in case user doesn't copies one)               #
+###############################################################################
 
 # permanently set alternative root dir. Use ":" to separate multiple roots
 # which can be switched at runtime with shift+left/right
@@ -70,193 +71,20 @@ qrcode="Alt+q"
 previous_root="Shift+Left"
 next_root="Shift+Right"
 
-# --- END Config defaults ---
+# --- User redefinable functions ---
 
-_rofi () {
-	rofi -no-auto-select -i -dmenu "$@"
-}
+_rofi () { rofi -no-auto-select -i -dmenu "$@"; }
 
-clip_in_primary() {
-	wl-copy -p
-}
+_notify() { notify-send -e "rofi-pass" "$1"; }
 
-clip_in_clipboard() {
-	wl-copy
-}
+_image_viewer () { feh - ; }
 
-do_type() {
-	wtype -d ${type_delay} -
-}
+_pwgen () { pwgen -y "$@"; }
 
-notify_on() {
-	if [[ $notify == "true" ]]; then
-		return 0
-	else
-		return 1
-	fi
-}
 
-# wrapper for notify-send, can be redefined in config
-_notify() {
-	notify-send -e "rofi-pass" "$1"
-}
-
-has_qrencode() {
-	command -v qrencode >/dev/null 2>&1
-}
-
-assert_status() {
-	[ "$1" -eq 1 ] && exit
-}
-
-listgpg () {
-	mapfile -d '' pw_list < <(find -L . -name '*.gpg' -print0)
-	pw_list=("${pw_list[@]#./}")
-	printf '%s\n' "${pw_list[@]}" | sort -n
-}
-
-# get all password files and output as newline-delimited text
-list_passwords() {
-	cd "${root}" || exit
-	mapfile -t pw_list < <(listgpg)
-	printf '%s\n' "${pw_list[@]%.gpg}" | sort -n
-}
-
-doClip () {
-	case "$clip" in
-		"primary") clip_in_primary ;;
-		"clipboard") clip_in_clipboard ;;
-		"both") clip_in_primary; wl-paste -p | clip_in_clipboard;;
-	esac
-}
-
-# FIXME: when done with removing global state, rewrite this func to subshell
-# func() () so the inner vars remain within this subshell
-type() {
-	local passentry="$1"
-	local field="$2"
-
-	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
-		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
-
-	# local autopass
-	autopass () {
-		do_press_key() {
-			wtype -P "$1" -p "$1"
-		}
-
-		for word in ${stuff["$AUTOTYPE_FIELD"]}; do
-			case "$word" in
-				":tab") do_press_key Tab ;;
-				":space") do_press_key space ;;
-				":delay") sleep "${delay}" ;;
-				":enter") do_press_key Return ;;
-				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
-				"pass") printf '%s' "${password}" | do_type ;;
-				"path")
-					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
-					;;
-				*) printf '%s' "${stuff[${word}]}" | do_type ;;
-			esac
-		done
-
-		[[ ${auto_enter} == "true" ]] && do_press_key Return
-	}
-
-	sleep $wait
-
-	case "$field" in
-		# doubt anyone will ever have 'menu' field in their pass file
-		"menu")
-			local sorted_fields=()
-			mapfile -t sorted_fields < <(get_sorted_fields)
-			sorted_fields+=("${AUTOTYPE_FIELD}")
-
-			field=$(printf '%s\n' "${sorted_fields[@]}" |
-						_rofi -theme-str "$placeholder")
-			assert_status $?
-
-			type "$passentry" "$field"
-			;;
-		"$USERNAME_FIELD") printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
-		pass) printf '%s' "${password}" | do_type ;;
-		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
-		"$AUTOTYPE_FIELD") autopass ;;
-		*) printf '%s' "${stuff[${field}]}" | do_type ;;
-	esac
-
-	# TODO: figure out better notifications coverage
-	# notify_on || [[ "${stuff[notify]}" == "true" ]] &&
-	# 	_notify "finished typing password";
-
-	clearUp
-}
-
-_image_viewer () {
-	feh -
-}
-
-generateQrCode() {
-	local passentry="$1"
-
-	if ! has_qrencode; then
-		printf '%s\n' "qrencode not found" | _rofi
-		assert_status $?
-		"${basecommand}"
-	fi
-
-	# FIXME: display qrcode in rofi right away
-	pass "$passentry" | head -n 1 | qrencode -d 300 -v 8 -l H -o - |
-		_image_viewer
-
-	if [ $? -eq 1 ]; then
-		printf '%s\n' "" |
-			_rofi -mesg "Image viewer not defined or cannot read from pipe"
-		assert_status $?
-		"${basecommand}"
-	fi
-	clearUp
-}
-
-openURL () {
-	local passentry="$1"
-	url=$(pass "$passentry" | grep "${URL_FIELD}: " |
-			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
-	[ -z "$url" ] && exit
-	$BROWSER "$url"
-
-	clearUp
-}
-
-generateOTP () {
-	local passentry="$1"
-
-	# First, we check if there is a non-conventional OTP command in the pass file
-	_check_otp_cmd() {
-		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
-	}
-
-	if _check_otp_cmd; then
-		# We execute the commands after otp_method: AS-IS
-		bash -c "$(_check_otp_cmd)"
-	else
-		# If there is no method defined, fallback to pass-otp
-		pass otp "$passentry"
-	fi
-
-	clearUp
-}
-
-clearClip() {
-	sleep $clip_clear
-	printf '%s' "" | clip_in_primary
-	printf '%s' "" | clip_in_clipboard
-	notify_on && _notify "Clipboard cleared"
-}
-
-wrap_placeholder() {
-	echo "#entry { placeholder: \"$1\"; }"
-}
+###############################################################################
+#                               Action functions                              #
+###############################################################################
 
 mainMenu () {
 	local passentry
@@ -390,57 +218,141 @@ mainMenu () {
 	clearUp
 }
 
-clearUp () {
-	password=''
-	unset stuff
-	unset password
+# FIXME: when done with removing global state, rewrite this func to subshell
+# func() () so the inner vars remain within this subshell
+type() {
+	local passentry="$1"
+	local field="$2"
+
+	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
+
+	do_type() { wtype -d ${type_delay} - ; }
+
+	# local autopass
+	autopass () {
+		do_press_key() {
+			wtype -P "$1" -p "$1"
+		}
+
+		for word in ${stuff["$AUTOTYPE_FIELD"]}; do
+			case "$word" in
+				":tab") do_press_key Tab ;;
+				":space") do_press_key space ;;
+				":delay") sleep "${delay}" ;;
+				":enter") do_press_key Return ;;
+				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+				"pass") printf '%s' "${password}" | do_type ;;
+				"path")
+					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
+					;;
+				*) printf '%s' "${stuff[${word}]}" | do_type ;;
+			esac
+		done
+
+		[[ ${auto_enter} == "true" ]] && do_press_key Return
+	}
+
+	sleep $wait
+
+	case "$field" in
+		# doubt anyone will ever have 'menu' field in their pass file
+		"menu")
+			local sorted_fields=()
+			mapfile -t sorted_fields < <(get_sorted_fields)
+			sorted_fields+=("${AUTOTYPE_FIELD}")
+
+			field=$(printf '%s\n' "${sorted_fields[@]}" |
+						_rofi -theme-str "$placeholder")
+			assert_status $?
+
+			type "$passentry" "$field"
+			;;
+		"$USERNAME_FIELD") printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
+		pass) printf '%s' "${password}" | do_type ;;
+		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+		"$AUTOTYPE_FIELD") autopass ;;
+		*) printf '%s' "${stuff[${field}]}" | do_type ;;
+	esac
+
+	# TODO: figure out better notifications coverage
+	# notify_on || [[ "${stuff[notify]}" == "true" ]] &&
+	# 	_notify "finished typing password";
+
+	clearUp
 }
 
-helpMenu () {
-	_rofi -mesg "Hint: All hotkeys are configurable in config file" -p "Help > " <<- EOM
-	${autotype}: Autotype
-	${type_user}: Type Username
-	${type_pass}: Type Password
-	${type_otp}: Type OTP
-	${qrcode}: Generate and display qrcode
-	---
-	${copy_name}: Copy Username
-	${copy_pass}: Copy Password
-	${copy_url}: Copy URL
-	${open_url}: Open URL
-	${copy_menu}: Copy Custom Field
-	---
-	${action_menu}: Edit, Move, Delete, Re-generate Submenu
-	${show}: Show Password File
-	${insert_pass}: Insert new Pass Entry
-	${switch}: Switch Pass/Bookmark Mode
-	---
-	${previous_root}: Switch to previous password store (--root)
-	${next_root}: Switch to next password store (--root)
-EOM
+generateQrCode() {
+	local passentry="$1"
 
-	assert_status $?
+	has_qrencode() { command -v qrencode >/dev/null 2>&1; }
 
-	unset helptext; mainMenu;
+	if ! has_qrencode; then
+		printf '%s\n' "qrencode not found" | _rofi
+		assert_status $?
+		"${basecommand}"
+	fi
+
+	# FIXME: display qrcode in rofi right away
+	pass "$passentry" | head -n 1 | qrencode -d 300 -v 8 -l H -o - |
+		_image_viewer
+
+	if [ $? -eq 1 ]; then
+		printf '%s\n' "" |
+			_rofi -mesg "Image viewer not defined or cannot read from pipe"
+		assert_status $?
+		"${basecommand}"
+	fi
+	clearUp
 }
 
-# Returns sorted keys for current password entry with 'autotype' key removed.
-# Fields like 'user', 'url', etc
-get_sorted_fields() {
-	local -a keys=("${!stuff[@]}")
-	# remove autotype field from keys array
-	keys=("${keys[@]/$AUTOTYPE_FIELD}")
+openURL () {
+	local passentry="$1"
+	url=$(pass "$passentry" | grep "${URL_FIELD}: " |
+			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
+	[ -z "$url" ] && exit
+	$BROWSER "$url"
 
-	placeholder=$(wrap_placeholder "Field to autotype")
+	clearUp
+}
 
-	# grep is needed cuz after 'autotype' field gets cleared from the
-	# array above, indecies do not update and we get an empty element.
-	# So it's needed to filter out empty strings
-	printf '%s\n' "${keys[@]}" | sort | grep -v "^$"
+generateOTP () {
+	local passentry="$1"
+
+	# First, we check if there is a non-conventional OTP command in the pass file
+	_check_otp_cmd() {
+		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
+	}
+
+	if _check_otp_cmd; then
+		# We execute the commands after otp_method: AS-IS
+		bash -c "$(_check_otp_cmd)"
+	else
+		# If there is no method defined, fallback to pass-otp
+		pass otp "$passentry"
+	fi
+
+	clearUp
 }
 
 copy() {
 	local field="$1"
+
+	doClip () {
+		case "$clip" in
+			"primary") clip_in_primary ;;
+			"clipboard") clip_in_clipboard ;;
+			"both") clip_in_primary; wl-paste -p | clip_in_clipboard;;
+		esac
+	}
+
+	clearClip() {
+		sleep $clip_clear
+		printf '%s' "" | clip_in_primary
+		printf '%s' "" | clip_in_clipboard
+		notify_on && _notify "Clipboard cleared"
+	}
+
 	case $field in
 		# i doubt anyone will have 'menu' field in their password file
 		menu)
@@ -493,6 +405,46 @@ actionMenu () {
 		"$BACK_OPTION") mainMenu ;;
 		*) exit ;;
 	esac
+}
+
+manageEntry () {
+	local passentry="$1"
+
+	cd "${root}" || exit
+
+	if [[ "$2" == "edit" ]]; then
+		pass edit "${passentry}"
+	elif [[ "$2" == "move" ]]; then
+		placeholder=$(wrap_placeholder "New path for $passentry")
+		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
+		assert_status $?
+
+		pass mv "$passentry" "$path"
+
+	elif [[ "$2" == "copy" ]]; then
+		placeholder=$(wrap_placeholder "Path for $passentry copy")
+		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
+		assert_status $?
+
+		pass cp "$passentry" "$path"
+
+	elif [[ "$2" == "delete" ]]; then
+		HELP="Selected entry: ${passentry}"
+		ask_content=("Yes" "No")
+		placeholder=$(wrap_placeholder "Are You Sure? > ")
+		ask=$(printf '%s\n' "${ask_content[@]}" |
+				  _rofi -mesg "${HELP}" -theme-str "$placeholder")
+
+		case $ask in
+			"Yes") pass rm --force "${passentry}" ;;
+			"No") mainMenu ;;
+			*) exit ;;
+		esac
+	fi
+
+	# TODO: add notification here
+
+	mainMenu
 }
 
 generatePass () {
@@ -548,50 +500,6 @@ showEntry () {
 	exit
 }
 
-manageEntry () {
-	local passentry="$1"
-
-	cd "${root}" || exit
-
-	if [[ "$2" == "edit" ]]; then
-		pass edit "${passentry}"
-	elif [[ "$2" == "move" ]]; then
-		placeholder=$(wrap_placeholder "New path for $passentry")
-		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
-		assert_status $?
-
-		pass mv "$passentry" "$path"
-
-	elif [[ "$2" == "copy" ]]; then
-		placeholder=$(wrap_placeholder "Path for $passentry copy")
-		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
-		assert_status $?
-
-		pass cp "$passentry" "$path"
-
-	elif [[ "$2" == "delete" ]]; then
-		HELP="Selected entry: ${passentry}"
-		ask_content=("Yes" "No")
-		placeholder=$(wrap_placeholder "Are You Sure? > ")
-		ask=$(printf '%s\n' "${ask_content[@]}" |
-				  _rofi -mesg "${HELP}" -theme-str "$placeholder")
-
-		case $ask in
-			"Yes") pass rm --force "${passentry}" ;;
-			"No") mainMenu ;;
-			*) exit ;;
-		esac
-	fi
-
-	# TODO: add notification here
-
-	mainMenu
-}
-
-_pwgen () {
-	pwgen -y "$@"
-}
-
 insertPass () {
 	url=$(wl-paste)
 
@@ -606,7 +514,7 @@ insertPass () {
 	cd "${root}" || exit
 
 	placeholder=$(wrap_placeholder "Enter name, must be unique ... ")
-	name=$(listgpg | _rofi -format 'f' -filter "${domain_name}" \
+	name=$(list_passwords | _rofi -format 'f' -filter "${domain_name}" \
 		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
 	assert_status $?
 
@@ -635,6 +543,85 @@ insertPass () {
 			[[ $edit_new_pass == "true" ]] && pass edit "${pass_name}"
 }
 
+helpMenu () {
+	_rofi -mesg "Hint: All hotkeys are configurable in config file" -p "Help > " <<- EOM
+	${autotype}: Autotype
+	${type_user}: Type Username
+	${type_pass}: Type Password
+	${type_otp}: Type OTP
+	${qrcode}: Generate and display qrcode
+	---
+	${copy_name}: Copy Username
+	${copy_pass}: Copy Password
+	${copy_url}: Copy URL
+	${open_url}: Open URL
+	${copy_menu}: Copy Custom Field
+	---
+	${action_menu}: Edit, Move, Delete, Re-generate Submenu
+	${show}: Show Password File
+	${insert_pass}: Insert new Pass Entry
+	${switch}: Switch Pass/Bookmark Mode
+	---
+	${previous_root}: Switch to previous password store (--root)
+	${next_root}: Switch to next password store (--root)
+EOM
+
+	assert_status $?
+
+	unset helptext; mainMenu;
+}
+
+
+###############################################################################
+#                               Helper functions                              #
+###############################################################################
+
+clip_in_primary() { wl-copy -p; }
+
+clip_in_clipboard() { wl-copy; }
+
+notify_on() {
+	if [[ $notify == "true" ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+assert_status() { [ "$1" -eq 1 ] && exit; }
+
+# get all password files and output as newline-delimited text
+list_passwords() {
+	cd "${root}" || exit
+	mapfile -d '' pw_list < <(find -L . -name '*.gpg' -print0)
+	pw_list=("${pw_list[@]#./}")
+	printf '%s\n' "${pw_list[@]%.gpg}" | sort -n
+}
+
+wrap_placeholder() { echo "#entry { placeholder: \"$1\"; }"; }
+
+# FIXME: get rid of this one
+clearUp () {
+	password=''
+	unset stuff
+	unset password
+}
+
+# Returns sorted keys for current password entry with 'autotype' key removed.
+# Fields like 'user', 'url', etc
+get_sorted_fields() {
+	local -a keys=("${!stuff[@]}")
+	# remove autotype field from keys array
+	keys=("${keys[@]/$AUTOTYPE_FIELD}")
+
+	placeholder=$(wrap_placeholder "Field to autotype")
+
+	# grep is needed cuz after 'autotype' field gets cleared from the
+	# array above, indecies do not update and we get an empty element.
+	# So it's needed to filter out empty strings
+	printf '%s\n' "${keys[@]}" | sort | grep -v "^$"
+}
+
 help_msg () {
 	cat <<'EOF'
 	Usage:
@@ -647,18 +634,24 @@ help_msg () {
 EOF
 }
 
-get_config_file () {
-	configs=(
+
+###############################################################################
+#                             Main function logic                             #
+###############################################################################
+
+# sources the first config file with a valid path
+load_config () {
+	local config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
+	local -a configs=(
 		"$ROFI_PASS_CONFIG"
 		"$config_dir/rofi-pass/config"
 		"/etc/rofi-pass.conf"
 	)
 
-	# return the first config file with a valid path
 	for config in "${configs[@]}"; do
 		# '-n' is needed in case ROFI_PASS_CONFIG is not set
 		if [[ -n "${config}" && -f "${config}" ]]; then
-			printf "%s" "$config"
+			source "$config"
 			return
 		fi
 	done
@@ -680,9 +673,7 @@ set_roots () {
 }
 
 main () {
-	# load config file
-	config_file="$(get_config_file)"
-	[[ -n "$config_file" ]] && source "$config_file"
+	load_config
 
 	# check for BROWSER variable, use xdg-open as fallback
 	[[ -z $BROWSER ]] && export BROWSER=xdg-open
