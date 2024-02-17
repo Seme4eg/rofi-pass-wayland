@@ -354,9 +354,11 @@ manageEntry () {
 		assert_status $?
 
 		notify_w "Moving $passentry to $path ..."
-		pass mv "$passentry" "$path" &&
-			notify_w "Successfully moved $passentry to $path" ||
-				notify_w "Failed to move $passentry to $path"
+		if pass mv "$passentry" "$path"; then
+			notify_w "Successfully moved $passentry to $path"
+		else
+			notify_w "Failed to move $passentry to $path"
+		fi
 
 	elif [[ "$2" == "copy" ]]; then
 		placeholder=$(wrap_placeholder "Path for $passentry copy")
@@ -364,9 +366,11 @@ manageEntry () {
 		assert_status $?
 
 		notify_w "Copying $passentry to $path ..."
-		pass cp "$passentry" "$path" &&
-			notify_w "Successfully copied $passentry to $path" ||
-				notify_w "Failed copying $passentry to $path"
+		if pass cp "$passentry" "$path"; then
+			notify_w "Successfully copied $passentry to $path"
+		else
+			notify_w "Failed copying $passentry to $path"
+		fi
 
 	elif [[ "$2" == "delete" ]]; then
 		HELP="Selected entry: ${passentry}"
@@ -378,9 +382,11 @@ manageEntry () {
 		case $ask in
 			"Yes")
 				notify_w "Deleting $passentry ..."
-				pass rm --force "$passentry" &&
-					notify_w "Successfully deleted $passentry" ||
-						notify_w "Failed to delete $passentry"
+				if pass rm --force "$passentry"; then
+					notify_w "Successfully deleted $passentry"
+				else
+					notify_w "Failed to delete $passentry"
+				fi
 				;;
 			"No") mainMenu ;;
 			*) exit ;;
