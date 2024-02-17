@@ -78,9 +78,10 @@ _rofi () { rofi -no-auto-select -i -dmenu "$@"; }
 
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
-_image_viewer () { feh - ; }
+# REVIEW: not sure about --clip flag
+_generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 
-_pwgen () { pwgen -y "$@"; }
+_image_viewer () { feh - ; }
 
 
 ###############################################################################
@@ -392,41 +393,19 @@ manageEntry () {
 
 generatePass () {
 	local passentry="$1"
-	askmenu_content=("yes" "no")
-	placeholder=$(wrap_placeholder "Generate new password for ${passentry}?")
-	generatep=$(printf '%s\n' "${askmenu_content[@]}" |
-					 _rofi -theme-str "$placeholder" )
 
-	assert_status $?
-
-	case $generatep in
-		yes) true ;;
-		no) actionMenu "$1" ;;
-	esac
-
-	symbols_content=("yes" "no" "cancel")
-	placeholder=$(wrap_placeholder "Use symbols?")
-	use_symbols=$(printf '%s\n' "${symbols_content[@]}" | _rofi -theme-str "$placeholder")
-	assert_status $?
-
-	case $use_symbols in
-		no) symbols="-n" ;;
-		cancel) mainMenu ;;
-	esac
-
-	placeholder=$(wrap_placeholder "Enter password length (Default: ${password_length})")
+	placeholder=$(wrap_placeholder "Password length (leave empty for pass default):")
 	length=$(printf '%s' "" | _rofi -theme-str "$placeholder")
 	assert_status $?
 
-	[ -z "$length" ] && length="$password_length"
-
 	notify_w "Generating and saving new passwrod for $passentry"
 
-	# REVIEW: prompt for -c flag?
-	# don't quote symbols
-	pass generate $symbols -c -i "$passentry" "$length" > /dev/null &&
-		notify_w "Successfully generated new password for $passentry" ||
-			notify_w "Failed to generate nwe password for $passentry"
+	# XXX: what happens when no length specified? will pass fail?
+	if _generate_pass "$passentry" "$length"; then
+		notify_w "Successfully generated new password for $passentry"
+	else
+		notify_w "Failed to generate nwe password for $passentry"
+	fi
 }
 
 showEntry () {
@@ -455,41 +434,45 @@ insertPass () {
 	if [[ "${url:0:4}" == "http" ]]; then
 		domain_name="$(printf '%s\n' "${url}" | awk -F / '{l=split($3,a,"."); \
 			print (a[l-1]=="com"?a[l-2] OFS:X) a[l-1] OFS a[l]}' OFS=".")"
-		help_content="Domain: ${domain_name}"
+		help_content="Url: ${domain_name}"
 	else
 		help_content="Hint: Copy URL to clipboard before calling this menu."
 	fi
 
 	cd "${root}" || exit
 
-	placeholder=$(wrap_placeholder "Enter name, must be unique ... ")
-	name=$(list_passwords | _rofi -format 'f' -filter "${domain_name}" \
+	placeholder=$(wrap_placeholder "Enter name, must be unique ...")
+	path=$(list_passwords | _rofi -format 'f' -filter "${domain_name}" \
 		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
 	assert_status $?
 
-	user_content=("${default_user2}" "${USER}" "${default_user}")
-	placeholder=$(wrap_placeholder "Enter username")
-	user=$(printf '%s\n' "${user_content[@]}" | \
-		_rofi -theme-str "$placeholder" -p "> ")
+	[ -z "$path" ] && notify_w "No empty path allowed" && insertPass
+
+	local _user="$default_user"
+	[[ "$_user" == ":basename" ]] && _user="$(basename "$path")"
+
+	users=("$_user" "${USER}")
+	[ -n "$default_user2" ] && users+=("$default_user2")
+	placeholder=$(wrap_placeholder "Enter username ...")
+	user=$(printf '%s\n' "${users[@]}" | _rofi -theme-str "$placeholder")
 	assert_status $?
 
-	message="Type Password or hit Enter to generate one"
-	placeholder=$(wrap_placeholder "Password")
-	pw=$(printf '%s' "Generate" | \
-		_rofi -password -theme-str "$placeholder" -mesg "$message")
+	placeholder=$(wrap_placeholder "Type password or hit Enter to generate one")
+	pw=$(printf '%s' "Generate" | _rofi -password -theme-str "$placeholder")
 
-	[[ $pw == "Generate" ]] && pw=$(_pwgen "${password_length}")
-
-	clear
-
-	pass_content=("${pw}" "---" "${USERNAME_FIELD}: ${user}")
+	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}")
 	[[ $url == http* ]] && pass_content+=("${URL_FIELD}: ${url}")
 
-	local pass_name="$name"
+	notify_w "Creating password entry $path ..."
+	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" > /dev/null
 
-	printf '%s\n' "${pass_content[@]}" |
-		pass insert -m "${pass_name}" > /dev/null && \
-			[[ $edit_new_pass == "true" ]] && pass edit "${pass_name}"
+	if [ $? == 0 ]; then
+		[[ $pw == "Generate" ]] && _generate_pass "$path"
+		[[ $edit_new_pass == "true" ]] && pass edit "${path}"
+		notify_w "Password entry $path successfully created"
+	else
+		notify_w "Failed to create new password entry $path"
+	fi
 }
 
 helpMenu () {

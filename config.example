@@ -68,11 +68,6 @@ next_root="Shift+Right"
 # 	rofi -no-auto-select -i -dmenu "$@"
 # }
 
-# default command to generate passwords
-# _pwgen () {
-# 	pwgen -y "$@"
-# }
-
 # image viewer to display qrcode of selected entry
 # qrencode is needed to generate the image and a viewer
 # that can read from pipes. Known viewers to work are feh and display
@@ -85,3 +80,5 @@ next_root="Shift+Right"
 # _notify () {
 # 	notify-send -e "rofi-pass" "$1"
 # }
+
+# _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }

@@ -80,7 +80,6 @@ in a convenient way using [rofi](https://github.com/lbonn/rofi).
 * gawk
 * bash 4.x
 * find
-* pwgen
 * [pass-otp](https://github.com/tadfisher/pass-otp) (optional: for OTPs)
 
 ### BSD
