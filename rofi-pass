@@ -173,8 +173,8 @@ type() {
 	local passentry="$1"
 	local field="$2"
 
-	[[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
-		fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
+  [[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+    fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
 
 	do_type() { sleep $wait; wtype -d ${type_delay} - ; }
 
@@ -211,7 +211,7 @@ type() {
 
 			placeholder=$(wrap_placeholder "Field to autotype")
 			field=$(printf '%s\n' "${sorted_fields[@]}" |
-						_rofi -theme-str "$placeholder")
+						    _rofi -theme-str "$placeholder")
 			assert_status $?
 
 			type "$passentry" "$field"
@@ -252,7 +252,7 @@ window{
 openURL () {
 	local passentry="$1"
 	url=$(pass "$passentry" | grep "${URL_FIELD}: " |
-			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
+			    gawk '{sub(/:/,"")}{print $2}1' | head -1)
 	[ -z "$url" ] && exit
 	$BROWSER "$url"
 }
@@ -299,12 +299,12 @@ copy() {
 			mapfile -t sorted_fields < <(get_sorted_fields)
 			placeholder=$(wrap_placeholder "Field to copy")
 			field=$(printf '%s\n' "${sorted_fields[@]}" | sort |
-							_rofi -theme-str "$placeholder")
+							  _rofi -theme-str "$placeholder")
 
 			assert_status $?
 
 			copy "$field"
-		;;
+		  ;;
 		"pass")
 			printf '%s' "${fields_map[$field]}" | doClip
 			notify_w "Copied $field field\nClearing in $clip_clear seconds"
@@ -377,7 +377,7 @@ manageEntry () {
 		ask_content=("yes" "no")
 		placeholder=$(wrap_placeholder "Are You Sure? > ")
 		ask=$(printf '%s\n' "${ask_content[@]}" |
-				  _rofi -mesg "${HELP}" -theme-str "$placeholder")
+				    _rofi -mesg "${HELP}" -theme-str "$placeholder")
 
 		case $ask in
 			"Yes")
@@ -547,7 +547,7 @@ populate_fields_map() {
 	# if the line contains the string otpauth://. If either condition is true,
 	# the action block associated with this condition is executed
 	fields=$(printf '%s\n' "${password_temp[@]:1}" |
-				 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
+				     awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
 	unset password_temp
 
 	if [[ -n $fields ]]; then
