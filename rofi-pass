@@ -374,7 +374,11 @@ mainMenu () {
 		13) openURL "$passentry" ;;
 		14) copy $USERNAME_FIELD ;;
 		15) copy 'pass' ;;
-		16) showEntry ;;
+		16)
+			local -a lines
+			for key in "${!stuff[@]}"; do lines+=("${key}: ${stuff[$key]}"); done
+			showEntry "$(printf '%s\n' "${lines[@]}")"
+			;;
 		17) copy $URL_FIELD ;;
 		21) type "$passentry" 'OTP' ;;
 		23) actionMenu "$passentry";;
@@ -390,7 +394,6 @@ clearUp () {
 	password=''
 	unset stuff
 	unset password
-	unset stuff
 }
 
 helpMenu () {
@@ -528,13 +531,9 @@ generatePass () {
 }
 
 showEntry () {
-	local -a lines
-	local pass_content
+	local content="$1"
 
-	for key in "${!stuff[@]}"; do lines+=("${key}: ${stuff[$key]}"); done
-	pass_content="$(printf '%s\n' "${lines[@]}")"
-
-	content=("$BACK_OPTION" "${pass_content}")
+	content=("$BACK_OPTION" "${content}")
 	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
 	selection=$(printf '%s\n' "${content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
@@ -546,7 +545,6 @@ showEntry () {
 		*) copy "$field" ;;
 	esac
 
-	unset stuff
 	exit
 }
 
@@ -585,11 +583,9 @@ manageEntry () {
 		esac
 	fi
 
-	mainMenu
-}
+	# TODO: add notification here
 
-edit_pass() {
-    [[ $edit_new_pass == "true" ]] && pass edit "${1}"
+	mainMenu
 }
 
 _pwgen () {
@@ -635,7 +631,8 @@ insertPass () {
 	local pass_name="$name"
 
 	printf '%s\n' "${pass_content[@]}" |
-		pass insert -m "${pass_name}" > /dev/null && edit_pass "${pass_name}"
+		pass insert -m "${pass_name}" > /dev/null && \
+			[[ $edit_new_pass == "true" ]] && pass edit "${pass_name}"
 }
 
 help_msg () {
