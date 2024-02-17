@@ -88,8 +88,6 @@ _pwgen () { pwgen -y "$@"; }
 ###############################################################################
 
 mainMenu () {
-	local passentry
-
 	args=(
 		-kb-custom-1 "${autotype}"
 		-kb-custom-2 "${type_user}"
@@ -121,6 +119,7 @@ mainMenu () {
 		args+=(-mesg "PW Store: ${root}")
 	fi
 
+	local passentry
 	passentry="$(list_passwords 2>/dev/null | _rofi "${args[@]}")"
 
 	rofi_exit=$?
@@ -145,53 +144,8 @@ mainMenu () {
 		26) ${basecommand} --bmarks; return ;;
 	esac
 
-	# get an array of password file fields like url: user: and custom ones
-	local -a password_temp
-	mapfile -t password_temp < <(pass show "$passentry")
-	local password=${password_temp[0]}
-
-	fields=$(printf '%s\n' "${password_temp[@]:1}" |
-				 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
-
-	unset password_temp
-
-	# FIXME: wtf is stuff
-	declare -A stuff
-	stuff["pass"]=${password}
-
-	if [[ -n $fields ]]; then
-		while read -r LINE; do
-			unset _id _val
-			case "$LINE" in
-				"otpauth://"*|"${OTPMETHOD_FIELD}"*)
-					_id="OTP"
-					_val=""
-					;;
-				*)
-					_id="${LINE%%: *}"
-					_val="${LINE#* }"
-					;;
-			esac
-
-			[[ -n "$_id" ]] && stuff["${_id}"]=${_val}
-		done < <(printf '%s\n' "${fields}")
-
-		if test "${stuff['autotype']+autotype}"; then
-			:
-		else
-			stuff["autotype"]="${USERNAME_FIELD} :tab pass"
-		fi
-	fi
-
-	if [[ -z "${stuff["${USERNAME_FIELD}"]}" ]]; then
-		if [[ -n $default_user ]]; then
-			if [[ "$default_user" == ":filename" ]]; then
-				stuff["${USERNAME_FIELD}"]="$(basename "$passentry")"
-			else
-				stuff["${USERNAME_FIELD}"]="${default_user}"
-			fi
-		fi
-	fi
+	declare -A fields_map
+	populate_fields_map "$passentry"
 
 	# actions based on keypresses
 	# The exit code for -kb-custom-X is X+9.
@@ -203,11 +157,7 @@ mainMenu () {
 		13) openURL "$passentry" ;;
 		14) copy $USERNAME_FIELD ;;
 		15) copy 'pass' ;;
-		16)
-			local -a lines
-			for key in "${!stuff[@]}"; do lines+=("${key}: ${stuff[$key]}"); done
-			showEntry "$(printf '%s\n' "${lines[@]}")"
-			;;
+		16) showEntry ;;
 		17) copy $URL_FIELD ;;
 		21) type "$passentry" 'OTP' ;;
 		23) actionMenu "$passentry";;
@@ -216,7 +166,7 @@ mainMenu () {
 		28) generateQrCode "$passentry";;
 	esac
 
-	clearUp
+	unset fields_map
 }
 
 # FIXME: when done with removing global state, rewrite this func to subshell
@@ -225,8 +175,8 @@ type() {
 	local passentry="$1"
 	local field="$2"
 
-	[[ -z "${stuff["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
-		stuff["${AUTOTYPE_FIELD}"]="${default_autotype}"
+	[[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+		fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
 
 	do_type() { wtype -d ${type_delay} - ; }
 
@@ -236,18 +186,18 @@ type() {
 			wtype -P "$1" -p "$1"
 		}
 
-		for word in ${stuff["$AUTOTYPE_FIELD"]}; do
+		for word in ${fields_map["$AUTOTYPE_FIELD"]}; do
 			case "$word" in
 				":tab") do_press_key Tab ;;
 				":space") do_press_key space ;;
 				":delay") sleep "${delay}" ;;
 				":enter") do_press_key Return ;;
 				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
-				"pass") printf '%s' "${stuff[pass]}" | do_type ;;
+				"pass") printf '%s' "${fields_map[pass]}" | do_type ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
 					;;
-				*) printf '%s' "${stuff[${word}]}" | do_type ;;
+				*) printf '%s' "${fields_map[${word}]}" | do_type ;;
 			esac
 		done
 
@@ -270,18 +220,16 @@ type() {
 
 			type "$passentry" "$field"
 			;;
-		"$USERNAME_FIELD") printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
-		pass) printf '%s' "${stuff[pass]}" | do_type ;;
+		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | do_type ;;
+		pass) printf '%s' "${fields_map[pass]}" | do_type ;;
 		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autopass ;;
-		*) printf '%s' "${stuff[${field}]}" | do_type ;;
+		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
 
 	# TODO: figure out better notifications coverage
-	# notify_on || [[ "${stuff[notify]}" == "true" ]] &&
+	# notify_on || [[ "${fields_map[notify]}" == "true" ]] &&
 	# 	_notify "finished typing password";
-
-	clearUp
 }
 
 generateQrCode() {
@@ -305,7 +253,6 @@ generateQrCode() {
 		assert_status $?
 		"${basecommand}"
 	fi
-	clearUp
 }
 
 openURL () {
@@ -314,8 +261,6 @@ openURL () {
 			  gawk '{sub(/:/,"")}{print $2}1' | head -1)
 	[ -z "$url" ] && exit
 	$BROWSER "$url"
-
-	clearUp
 }
 
 generateOTP () {
@@ -333,8 +278,6 @@ generateOTP () {
 		# If there is no method defined, fallback to pass-otp
 		pass otp "$passentry"
 	fi
-
-	clearUp
 }
 
 copy() {
@@ -369,10 +312,10 @@ copy() {
 			copy "$field"
 		;;
 		"pass")
-			printf '%s' "${stuff[$field]}" | doClip
+			printf '%s' "${fields_map[$field]}" | doClip
 			clearClip &
 			;;
-		*) printf '%s' "${stuff[$field]}" | doClip ;;
+		*) printf '%s' "${fields_map[$field]}" | doClip ;;
 	esac
 
 	# TODO:
@@ -381,8 +324,6 @@ copy() {
 
 	# REVIEW: maybe always clear clip?
 	# clearClip &
-
-	clearUp
 }
 
 # receives current password entry as a parameter
@@ -485,9 +426,11 @@ generatePass () {
 }
 
 showEntry () {
-	local content="$1"
+	local content
+	local -a lines
+	for key in "${!fields_map[@]}"; do lines+=("${key}: ${fields_map[$key]}"); done
 
-	content=("$BACK_OPTION" "${content}")
+	content=("$(printf '%s\n' "${lines[@]}")" "$BACK_OPTION" )
 	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
 	selection=$(printf '%s\n' "${content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
@@ -592,6 +535,58 @@ notify_on() {
 
 assert_status() { [ "$1" -eq 1 ] && exit; }
 
+# Is called only in mainMenu, populates 'fields_map' var that is visible to all
+# function that mainMenu calls.
+populate_fields_map() {
+	local passentry="$1"
+
+	# get an array of password file fields like url: user: and custom ones
+	local -a password_temp
+	mapfile -t password_temp < <(pass show "$passentry")
+
+	fields_map["pass"]=${password_temp[0]}
+
+	# checks if the first field ($1) of the input line ends with a colon (:$) or
+	# if the line contains the string otpauth://. If either condition is true,
+	# the action block associated with this condition is executed
+	fields=$(printf '%s\n' "${password_temp[@]:1}" |
+				 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
+	unset password_temp
+
+	if [[ -n $fields ]]; then
+		while read -r LINE; do
+			unset _id _val
+			case "$LINE" in
+				"otpauth://"* | "${OTPMETHOD_FIELD}"*)
+					_id="OTP"
+					_val=""
+					;;
+				*)
+					_id="${LINE%%: *}"
+					_val="${LINE#* }"
+					;;
+			esac
+
+			[[ -n "$_id" ]] && fields_map["${_id}"]=${_val}
+		done < <(printf '%s\n' "${fields}")
+
+		if test "${fields_map['autotype']+autotype}"; then
+			:
+		else
+			fields_map["autotype"]="${USERNAME_FIELD} :tab pass"
+		fi
+	fi
+
+	if [[ -z "${fields_map["${USERNAME_FIELD}"]}" && -n $default_user ]]; then
+		if [[ "$default_user" == ":filename" ]]; then
+			fields_map["${USERNAME_FIELD}"]="$(basename "$passentry")"
+		else
+			fields_map["${USERNAME_FIELD}"]="${default_user}"
+		fi
+	fi
+
+}
+
 # get all password files and output as newline-delimited text
 list_passwords() {
 	cd "${root}" || exit
@@ -603,15 +598,10 @@ list_passwords() {
 # FIXME: how to move the '-theme-str' part in this funciton
 wrap_placeholder() { echo "#entry { placeholder: \"$1\"; }"; }
 
-# FIXME: get rid of this one
-clearUp () {
-	unset stuff
-}
-
 # Returns sorted keys for current password entry with 'autotype' key removed.
 # Fields like 'user', 'url', etc
 get_sorted_fields() {
-	local -a keys=("${!stuff[@]}")
+	local -a keys=("${!fields_map[@]}")
 	# remove autotype field from keys array
 	keys=("${keys[@]/$AUTOTYPE_FIELD}")
 	# grep out empty strings cuz command above doesn't update indecies
