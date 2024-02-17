@@ -260,116 +260,97 @@ wrap_placeholder() {
 
 mainMenu () {
 	local passentry
-	if [[ $1 == "--bmarks" ]]; then
-		placeholder=$(wrap_placeholder "Bookmarks Mode. ${switch} to switch")
-		passentry="$(list_passwords 2>/dev/null | \
-			_rofi -kb-custom-10 "${switch}" -theme-str "$placeholder")"
 
-		case $? in
-			1) exit ;;
-			19) ${basecommand} ;;
-			0) openURL "$passentry" ;;
-		esac
-	else
-		unset passentry
+	args=(
+		-kb-custom-1 "${autotype}"
+		-kb-custom-2 "${type_user}"
+		-kb-custom-3 "${type_pass}"
+		-kb-custom-4 "${open_url}"
+		-kb-custom-5 "${copy_name}"
+		-kb-custom-6 "${copy_pass}"
+		-kb-custom-7 "${show}"
+		-kb-custom-8 "${copy_url}"
+		-kb-custom-9 "${type_menu}"
+		-kb-custom-10 "${previous_root}"
+		-kb-custom-11 "${next_root}"
+		-kb-custom-12 "${type_otp}"
+		-kb-custom-14 "${action_menu}"
+		-kb-custom-15 "${copy_menu}"
+		-kb-custom-16 "${help}"
+		-kb-custom-17 "${switch}"
+		-kb-custom-18 "${insert_pass}"
+		-kb-custom-19 "${qrcode}"
 
-		args=(
-			-kb-custom-1 "${autotype}"
-			-kb-custom-2 "${type_user}"
-			-kb-custom-3 "${type_pass}"
-			-kb-custom-4 "${open_url}"
-			-kb-custom-5 "${copy_name}"
-			-kb-custom-6 "${copy_pass}"
-			-kb-custom-7 "${show}"
-			-kb-custom-8 "${copy_url}"
-			-kb-custom-9 "${type_menu}"
-			-kb-custom-10 "${previous_root}"
-			-kb-custom-11 "${next_root}"
-			-kb-custom-12 "${type_otp}"
-			-kb-custom-14 "${action_menu}"
-			-kb-custom-15 "${copy_menu}"
-			-kb-custom-16 "${help}"
-			-kb-custom-17 "${switch}"
-			-kb-custom-18 "${insert_pass}"
-			-kb-custom-19 "${qrcode}"
+		# These keyboard shortcut options are needed, because
+		# Shift+<Left|Right> are otherwise taken by rofi.
+		-kb-mode-previous ""
+		-kb-mode-next ""
+		-p "> "
+	)
 
-			# These keyboard shortcut options are needed, because
-			# Shift+<Left|Right> are otherwise taken by rofi.
-			-kb-mode-previous ""
-			-kb-mode-next ""
-			-p "> "
-		)
+	if [[ ${#roots[@]} -gt "1" || $custom_root == "true" ]]; then
+		args+=(-mesg "PW Store: ${root}")
+	fi
 
-		if [[ ${#roots[@]} -gt "1" || $custom_root == "true" ]]; then
-			args+=(-mesg "PW Store: ${root}")
-		fi
+	passentry="$(list_passwords 2>/dev/null | _rofi "${args[@]}")"
 
-		passentry="$(list_passwords 2>/dev/null | _rofi "${args[@]}")"
+	rofi_exit=$?
 
-		rofi_exit=$?
+	# Actions based on exit code, which do not need the entry.
+	# The exit code for -kb-custom-X is X+9.
+	case $rofi_exit in
+		1) exit ;;
+		19)
+			roots_index=$(( (roots_index-1+roots_length) % roots_length))
+			root=${roots[$roots_index]}
+			mainMenu
+			return
+			;;
+		20)
+			roots_index=$(( (roots_index+1) % roots_length))
+			root=${roots[$roots_index]}
+			mainMenu
+			return
+			;;
+		25) helpMenu; return;;
+		26) ${basecommand} --bmarks; return ;;
+	esac
 
-		# Actions based on exit code, which do not need the entry.
-		# The exit code for -kb-custom-X is X+9.
-		case $rofi_exit in
-			1) exit ;;
-			19)
-				roots_index=$(( (roots_index-1+roots_length) % roots_length))
-				root=${roots[$roots_index]}
-				mainMenu
-				return
-				;;
-			20)
-				roots_index=$(( (roots_index+1) % roots_length))
-				root=${roots[$roots_index]}
-				mainMenu
-				return
-				;;
-			25) helpMenu; return;;
-			26) ${basecommand} --bmarks; return;;
-		esac
+	# get an array of password file fields like url: user: and custom ones
+	local -a password_temp
+	mapfile -t password_temp < <(pass show "$passentry")
+	password=${password_temp[0]}
 
-		# get an array of password file fields like url: user: and custom ones
-		local -a password_temp
-		mapfile -t password_temp < <(pass show "$passentry")
-		password=${password_temp[0]}
+	fields=$(printf '%s\n' "${password_temp[@]:1}" |
+				 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
 
-		if [[ ${password} == "#FILE="* ]]; then
-			pass_file="${password#*=}"
-			mapfile -t password_temp2 < <(pass show "${pass_file}")
-			password=${password_temp2[0]}
-		fi
+	unset password_temp
 
-		fields=$(printf '%s\n' "${password_temp[@]:1}" |
-					 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
+	# FIXME: wtf is stuff
+	declare -A stuff
+	stuff["pass"]=${password}
 
-		unset password_temp
+	if [[ -n $fields ]]; then
+		while read -r LINE; do
+			unset _id _val
+			case "$LINE" in
+				"otpauth://"*|"${OTPMETHOD_FIELD}"*)
+					_id="OTP"
+					_val=""
+					;;
+				*)
+					_id="${LINE%%: *}"
+					_val="${LINE#* }"
+					;;
+			esac
 
-		# FIXME: wtf is stuff
-		declare -A stuff
-		stuff["pass"]=${password}
+			[[ -n "$_id" ]] && stuff["${_id}"]=${_val}
+		done < <(printf '%s\n' "${fields}")
 
-		if [[ -n $fields ]]; then
-			while read -r LINE; do
-				unset _id _val
-				case "$LINE" in
-					"otpauth://"*|"${OTPMETHOD_FIELD}"*)
-						_id="OTP"
-						_val=""
-						;;
-					*)
-						_id="${LINE%%: *}"
-						_val="${LINE#* }"
-						;;
-				esac
-
-				[[ -n "$_id" ]] && stuff["${_id}"]=${_val}
-			done < <(printf '%s\n' "${fields}")
-
-			if test "${stuff['autotype']+autotype}"; then
-				:
-			else
-				stuff["autotype"]="${USERNAME_FIELD} :tab pass"
-			fi
+		if test "${stuff['autotype']+autotype}"; then
+			:
+		else
+			stuff["autotype"]="${USERNAME_FIELD} :tab pass"
 		fi
 	fi
 
@@ -720,7 +701,17 @@ main () {
 	case $1 in
 		--insert) insertPass ;;
 		--help) help_msg ;;
-		--bmarks) mainMenu --bmarks; ;;
+		--bmarks)
+			placeholder=$(wrap_placeholder "Bookmarks Mode. ${switch} to switch")
+			passentry="$(list_passwords 2>/dev/null | \
+				_rofi -kb-custom-10 "${switch}" -theme-str "$placeholder")"
+
+			case $? in
+				0) openURL "$passentry" ;;
+				19) ${basecommand} ;;
+				*) exit ;;
+			esac
+			;;
 		*) mainMenu ;;
 	esac
 }
