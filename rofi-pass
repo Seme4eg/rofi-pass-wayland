@@ -178,7 +178,7 @@ type() {
 	[[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
 		fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
 
-	do_type() { wtype -d ${type_delay} - ; }
+	do_type() { sleep $wait; wtype -d ${type_delay} - ; }
 
 	# local autopass
 	autopass () {
@@ -203,8 +203,6 @@ type() {
 
 		[[ ${auto_enter} == "true" ]] && do_press_key Return
 	}
-
-	sleep $wait
 
 	case "$field" in
 		# doubt anyone will ever have 'menu' field in their pass file
