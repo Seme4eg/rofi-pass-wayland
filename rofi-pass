@@ -148,7 +148,7 @@ mainMenu () {
 	# get an array of password file fields like url: user: and custom ones
 	local -a password_temp
 	mapfile -t password_temp < <(pass show "$passentry")
-	password=${password_temp[0]}
+	local password=${password_temp[0]}
 
 	fields=$(printf '%s\n' "${password_temp[@]:1}" |
 				 awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
@@ -243,7 +243,7 @@ type() {
 				":delay") sleep "${delay}" ;;
 				":enter") do_press_key Return ;;
 				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
-				"pass") printf '%s' "${password}" | do_type ;;
+				"pass") printf '%s' "${stuff[pass]}" | do_type ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
 					;;
@@ -263,6 +263,7 @@ type() {
 			mapfile -t sorted_fields < <(get_sorted_fields)
 			sorted_fields+=("${AUTOTYPE_FIELD}")
 
+			placeholder=$(wrap_placeholder "Field to autotype")
 			field=$(printf '%s\n' "${sorted_fields[@]}" |
 						_rofi -theme-str "$placeholder")
 			assert_status $?
@@ -270,7 +271,7 @@ type() {
 			type "$passentry" "$field"
 			;;
 		"$USERNAME_FIELD") printf '%s' "${stuff[${USERNAME_FIELD}]}" | do_type ;;
-		pass) printf '%s' "${password}" | do_type ;;
+		pass) printf '%s' "${stuff[pass]}" | do_type ;;
 		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autopass ;;
 		*) printf '%s' "${stuff[${field}]}" | do_type ;;
@@ -368,7 +369,7 @@ copy() {
 			copy "$field"
 		;;
 		"pass")
-			printf '%s' "$password" | doClip
+			printf '%s' "${stuff[$field]}" | doClip
 			clearClip &
 			;;
 		*) printf '%s' "${stuff[$field]}" | doClip ;;
@@ -599,13 +600,12 @@ list_passwords() {
 	printf '%s\n' "${pw_list[@]%.gpg}" | sort -n
 }
 
+# FIXME: how to move the '-theme-str' part in this funciton
 wrap_placeholder() { echo "#entry { placeholder: \"$1\"; }"; }
 
 # FIXME: get rid of this one
 clearUp () {
-	password=''
 	unset stuff
-	unset password
 }
 
 # Returns sorted keys for current password entry with 'autotype' key removed.
@@ -614,12 +614,7 @@ get_sorted_fields() {
 	local -a keys=("${!stuff[@]}")
 	# remove autotype field from keys array
 	keys=("${keys[@]/$AUTOTYPE_FIELD}")
-
-	placeholder=$(wrap_placeholder "Field to autotype")
-
-	# grep is needed cuz after 'autotype' field gets cleared from the
-	# array above, indecies do not update and we get an empty element.
-	# So it's needed to filter out empty strings
+	# grep out empty strings cuz command above doesn't update indecies
 	printf '%s\n' "${keys[@]}" | sort | grep -v "^$"
 }
 
