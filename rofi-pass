@@ -41,10 +41,9 @@ clip_clear=45
 ## Options for generating new password entries
 # open new password entries in editor
 edit_new_pass="true"
-# set to ':filename' for user field to be set to password file name
+# set to ':basename' for user field to be set to password file name
 default_user="${ROFI_PASS_DEFAULT_USER-$(whoami)}"
-default_user2=john_doe
-password_length=12
+default_user2=""
 
 ## Misc settings
 
@@ -570,7 +569,7 @@ populate_fields_map() {
 	fi
 
 	if [[ -z "${fields_map["${USERNAME_FIELD}"]}" && -n $default_user ]]; then
-		if [[ "$default_user" == ":filename" ]]; then
+		if [[ "$default_user" == ":basename" ]]; then
 			fields_map["${USERNAME_FIELD}"]="$(basename "$passentry")"
 		else
 			fields_map["${USERNAME_FIELD}"]="${default_user}"
