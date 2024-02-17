@@ -80,8 +80,6 @@ _notify() { notify-send -e "rofi-pass" "$1"; }
 # REVIEW: not sure about --clip flag
 _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 
-_image_viewer () { feh - ; }
-
 
 ###############################################################################
 #                               Action functions                              #
@@ -228,25 +226,27 @@ type() {
 
 generateQrCode() {
 	local passentry="$1"
+	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
 
 	has_qrencode() { command -v qrencode >/dev/null 2>&1; }
 
 	if ! has_qrencode; then
 		printf '%s\n' "qrencode not found" | _rofi
 		assert_status $?
-		"${basecommand}"
+		mainMenu
 	fi
 
-	# FIXME: display qrcode in rofi right away
-	pass "$passentry" | head -n 1 | qrencode -d 300 -v 8 -l H -o - |
-		_image_viewer
+	pass "$passentry" | head -n 1 |
+		qrencode -t png -o "$qrcode_path" -l H -s 25 -m 2 --dpi=192 -v 8
 
-	if [ $? -eq 1 ]; then
-		printf '%s\n' "" |
-			_rofi -mesg "Image viewer not defined or cannot read from pipe"
-		assert_status $?
-		"${basecommand}"
-	fi
+	_rofi -theme-str "
+entry{enabled:false;}
+textbox-prompt-colon{str:\"\";}
+window{
+  border-radius:6mm; padding:1mm; width:100mm; height:100mm;
+  background-image:url(\"$qrcode_path\",both);
+}"
+	rm -f "$qrcode_path"
 }
 
 openURL () {

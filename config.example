@@ -68,14 +68,6 @@ next_root="Shift+Right"
 # 	rofi -no-auto-select -i -dmenu "$@"
 # }
 
-# image viewer to display qrcode of selected entry
-# qrencode is needed to generate the image and a viewer
-# that can read from pipes. Known viewers to work are feh and display
-# _image_viewer () {
-#     feh -
-# #    display
-# }
-
 # wrapper for notify command, used if 'notify' option is set to 'true'
 # _notify () {
 # 	notify-send -e "rofi-pass" "$1"
