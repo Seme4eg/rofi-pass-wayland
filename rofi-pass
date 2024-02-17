@@ -162,8 +162,8 @@ mainMenu () {
 		21) type "$passentry" 'OTP' ;;
 		23) actionMenu "$passentry";;
 		24) copy 'menu' ;;
-		27) insertPass;;
-		28) generateQrCode "$passentry";;
+		27) insertPass ;;
+		28) generateQrCode "$passentry" ;;
 	esac
 
 	unset fields_map
@@ -226,10 +226,6 @@ type() {
 		"$AUTOTYPE_FIELD") autopass ;;
 		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
-
-	# TODO: figure out better notifications coverage
-	# notify_on || [[ "${fields_map[notify]}" == "true" ]] &&
-	# 	_notify "finished typing password";
 }
 
 generateQrCode() {
@@ -295,7 +291,7 @@ copy() {
 		sleep $clip_clear
 		printf '%s' "" | clip_in_primary
 		printf '%s' "" | clip_in_clipboard
-		notify_on && _notify "Clipboard cleared"
+		notify_w "Clipboard cleared"
 	}
 
 	case $field in
@@ -313,17 +309,14 @@ copy() {
 		;;
 		"pass")
 			printf '%s' "${fields_map[$field]}" | doClip
+			notify_w "Copied $field field\nClearing in $clip_clear seconds"
 			clearClip &
 			;;
-		*) printf '%s' "${fields_map[$field]}" | doClip ;;
+		*)
+			printf '%s' "${fields_map[$field]}" | doClip
+			notify_w "Copied $field field"
+			;;
 	esac
-
-	# TODO:
-	# notify_on &&
-	# 	_notify "Copied Password\\nClearing in $clip_clear seconds"
-
-	# REVIEW: maybe always clear clip?
-	# clearClip &
 }
 
 # receives current password entry as a parameter
@@ -362,30 +355,39 @@ manageEntry () {
 		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
 		assert_status $?
 
-		pass mv "$passentry" "$path"
+		notify_w "Moving $passentry to $path ..."
+		pass mv "$passentry" "$path" &&
+			notify_w "Successfully moved $passentry to $path" ||
+				notify_w "Failed to move $passentry to $path"
 
 	elif [[ "$2" == "copy" ]]; then
 		placeholder=$(wrap_placeholder "Path for $passentry copy")
 		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
 		assert_status $?
 
-		pass cp "$passentry" "$path"
+		notify_w "Copying $passentry to $path ..."
+		pass cp "$passentry" "$path" &&
+			notify_w "Successfully copied $passentry to $path" ||
+				notify_w "Failed copying $passentry to $path"
 
 	elif [[ "$2" == "delete" ]]; then
 		HELP="Selected entry: ${passentry}"
-		ask_content=("Yes" "No")
+		ask_content=("yes" "no")
 		placeholder=$(wrap_placeholder "Are You Sure? > ")
 		ask=$(printf '%s\n' "${ask_content[@]}" |
 				  _rofi -mesg "${HELP}" -theme-str "$placeholder")
 
 		case $ask in
-			"Yes") pass rm --force "${passentry}" ;;
+			"Yes")
+				notify_w "Deleting $passentry ..."
+				pass rm --force "$passentry" &&
+					notify_w "Successfully deleted $passentry" ||
+						notify_w "Failed to delete $passentry"
+				;;
 			"No") mainMenu ;;
 			*) exit ;;
 		esac
 	fi
-
-	# TODO: add notification here
 
 	mainMenu
 }
@@ -420,9 +422,13 @@ generatePass () {
 
 	[ -z "$length" ] && length="$password_length"
 
+	notify_w "Generating and saving new passwrod for $passentry"
+
 	# REVIEW: prompt for -c flag?
 	# don't quote symbols
-	pass generate $symbols -c -i "$passentry" "$length" > /dev/null
+	pass generate $symbols -c -i "$passentry" "$length" > /dev/null &&
+		notify_w "Successfully generated new password for $passentry" ||
+			notify_w "Failed to generate nwe password for $passentry"
 }
 
 showEntry () {
@@ -524,6 +530,11 @@ EOM
 clip_in_primary() { wl-copy -p; }
 
 clip_in_clipboard() { wl-copy; }
+
+# convenience _notify wrapper to skip all those checks everywhere
+notify_w() {
+	notify_on && _notify "$1"
+}
 
 notify_on() {
 	if [[ $notify == "true" ]]; then
