@@ -1,7 +1,7 @@
 #+title: rofi-pass-wayland
 
-A [[https://github.com/lbonn/rofi][rofi]] frontend for [[http://www.passwordstore.org/][ZX2C4 pass project]]. The original repo is not very
-actively maintained to i decided to give it a go. 
+A [[https://github.com/lbonn/rofi][rofi-wayland]] frontend for [[http://www.passwordstore.org/][ZX2C4 pass project]]. The original repo is not very
+actively maintained to i decided to give it a go.
 
 Main goal - provide needed frontend features for pass and sane codebase while
 still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
@@ -28,10 +28,6 @@ this script to see all available flags.
 - wl-clipboard
 - find
 - [[https://github.com/tadfisher/pass-otp][pass-otp]] (optional: for OTPs)
-
-*** BSD
-- gnugrep
-- gawk
 
 ** Configuration
 Presedence:
