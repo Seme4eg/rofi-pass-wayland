@@ -32,12 +32,6 @@ wait=0.2
 # delay between keypresses when typing (in ms)
 type_delay=12
 
-# Clipboard settings
-# Possible options: primary, clipboard, both
-clip=primary
-# Seconds before clearing pass from clipboard
-clip_clear=45
-
 ## Options for generating new password entries
 # open new password entries in editor
 edit_new_pass="true"
@@ -277,21 +271,7 @@ generateOTP () {
 
 copy() {
 	local field="$1"
-
-	doClip () {
-		case "$clip" in
-			"primary") clip_in_primary ;;
-			"clipboard") clip_in_clipboard ;;
-			"both") clip_in_primary; wl-paste -p | clip_in_clipboard;;
-		esac
-	}
-
-	clearClip() {
-		sleep $clip_clear
-		printf '%s' "" | clip_in_primary
-		printf '%s' "" | clip_in_clipboard
-		notify_w "Clipboard cleared"
-	}
+	local passentry="$2" # is not always passed
 
 	case $field in
 		# i doubt anyone will have 'menu' field in their password file
@@ -307,14 +287,11 @@ copy() {
 			copy "$field"
 		  ;;
 		"pass")
-			printf '%s' "${fields_map[$field]}" | doClip
-			notify_w "Copied $field field\nClearing in $clip_clear seconds"
-			clearClip &
+			pass -c "$passentry"
+			notify_w "Copied $field field\nClearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
 			;;
-		*)
-			printf '%s' "${fields_map[$field]}" | doClip
-			notify_w "Copied $field field"
-			;;
+		*) printf '%s' "${fields_map[$field]}" | wl-copy &&
+				 notify_w "Copied $field field" ;;
 	esac
 }
 
@@ -515,10 +492,6 @@ EOM
 ###############################################################################
 #                               Helper functions                              #
 ###############################################################################
-
-clip_in_primary() { wl-copy -p; }
-
-clip_in_clipboard() { wl-copy; }
 
 # convenience _notify wrapper to skip all those checks everywhere
 notify_w() {

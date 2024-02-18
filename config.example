@@ -23,12 +23,6 @@ wait=0.2
 # delay between keypresses when typing (in ms)
 type_delay=12
 
-# Clipboard settings
-# Possible options: primary, clipboard, both
-clip=primary
-# Seconds before clearing pass from clipboard
-clip_clear=45
-
 ## Options for generating new password entries
 # open new password entries in editor
 edit_new_pass="true"
