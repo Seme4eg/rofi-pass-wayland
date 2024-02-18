@@ -1,9 +1,15 @@
-ifndef PREFIX
-  PREFIX=/usr/local
-endif
+DESTDIR :=
+PKGNAME := rofi-pass
+PREFIX := /usr/local
 
+.PHONY: install
 install:
-	install -Dm755 rofi-pass $(DESTDIR)$(PREFIX)/bin/rofi-pass
-	install -Dm644 config.example $(DESTDIR)$(PREFIX)/share/doc/rofi-pass/config.example
-	install -Dm644 README.md $(DESTDIR)$(PREFIX)/share/doc/rofi-pass/README.md
-	install -Dm644 config.example $(DESTDIR)/etc/rofi-pass.conf
+	install -Dm755 ${PKGNAME} $(DESTDIR)$(PREFIX)/bin/${PKGNAME}
+	install -Dm644 config.example $(DESTDIR)$(PREFIX)/share/${PKGNAME}/config.example
+	install -Dm644 README.org $(DESTDIR)$(PREFIX)/share/doc/${PKGNAME}/README.org
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/${PKGNAME}
+	rm -f $(DESTDIR)$(PREFIX)/share/${PKGNAME}/config.example
+	rm -f $(DESTDIR)$(PREFIX)/share/doc/${PKGNAME}/README.org
