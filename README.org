@@ -80,3 +80,8 @@ it will prompt for the secret key password using ~pinentry~. If ~pinentry~ is
 configured to read from a ~tty~ then ~rofi-pass~ will hang indefinitely. To fix this
 you need to [[https://wiki.archlinux.org/title/GnuPG#pinentry][configure gpg]] to use a gui version of ~pinentry~. Afterwards you may
 have to kill the GPG agent if it's still in a bad state: ~killall -9 gpg-agent~.
+** Todos [0/2]
+*** TODO pass grep urls
+Instead of previous bookmarks functionality utilize 'pass grep $url_field' to
+grep and output all urls of the password store
+*** TODO Makefile uninstall target

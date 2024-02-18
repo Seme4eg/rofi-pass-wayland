@@ -669,6 +669,3 @@ main () {
 }
 
 main "$@"
-
-# TODO: instead of previous bookmarks functionality utilize 'pass grep $url_field'
-# to grep and output all urls of the password store and on enter open them
