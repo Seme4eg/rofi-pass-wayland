@@ -42,7 +42,7 @@ clip_clear=45
 # open new password entries in editor
 edit_new_pass="true"
 # set to ':basename' for user field to be set to password file name
-default_user="${ROFI_PASS_DEFAULT_USER-$(whoami)}"
+default_user="$(whoami)"
 default_user2=""
 
 ## Misc settings

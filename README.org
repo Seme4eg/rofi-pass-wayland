@@ -1,0 +1,84 @@
+#+title: rofi-pass-wayland
+
+A [[https://github.com/lbonn/rofi][rofi]] frontend for [[http://www.passwordstore.org/][ZX2C4 pass project]]. The original repo is not very
+actively maintained to i decided to give it a go. 
+
+Main goal - provide needed frontend features for pass and sane codebase while
+still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
+
+** Features
+- Move / copy / delete / edit / create / show entries
+- Generate new passwords for entries
+- Copy / type individual fields of selected entry
+- Autotype based on autotype field (can be customized)
+- Support for different password store roots (e.g. personal & work)
+- Bookmarks mode (open stored URLs in browser, default: Alt+x)
+- Open URLs of entries with hotkey
+- Generate and display QR code directly in rofi ([[https://fukuchi.org/works/qrencode/][qrencode]] needed).
+- Generate OTP (and also autotype them if desired)
+- Extensive configuration (see [[config.example]])
+
+** Dependencies
+- [[http://www.passwordstore.org/][pass]]
+- [[https://github.com/lbonn/rofi][rofi]]
+- wtype
+- wl-clipboard
+- find
+- [[https://github.com/tadfisher/pass-otp][pass-otp]] (optional: for OTPs)
+
+*** BSD
+- gnugrep
+- gawk
+
+** Configuration
+Presedence:
+- ~ROFI_PASS_CONFIG~ env var. You can set the environment variable like this:
+  ~ROFI_PASS_CONFIG="/path/to/config" rofi-pass~
+- =$HOME/.config/rofi-pass/config=
+- =/etc/rofi-pass.conf=
+- internal default values
+
+See example configuration in [[config.example]] file.
+
+** Autotyping
+Default autotype value is ~user :tab pass~. In case you don't have ~user:~
+field in your password file it will take value of ~default_user~ from your
+config (defaults to output of command ~whoami~). Or you can set
+~default_user~ to ~:basename~ and autotype will always type basename of
+password file as username. (i.e. for ~foo/bar/site.com/jack~ it will type
+~jack~ as  username)
+
+Example of password store file with autotyping of more than one field, using the
+~autotype~ entry:
+
+#+begin_src sh
+# mail/gmail/john@gmail.com
+de_password
+user: MyUser
+SomeField: foobar
+AnotherField: barfoo
+url: http://my.url.foo
+# self-explanatory - :tab, :space (might be useful for checkboxes), :enter
+# :delay - sleep before proceeding further
+# :otp - generate and type an OTP
+# path - fill in path of that password entry (in this case
+#   mail/gmail/john@gmail.com)
+autotype: SomeField :tab user :tab AnotherField :tab pass :space :enter
+#+end_src
+
+** OTP
+The format for OTPs should either compatible with =pass-otp(1)= -
+~otpauth://[...]~.
+
+Or it should define a method for generating OTPs:
+
+: otp_method: /opt/obscure-otp-generator/oog --some-option some args
+
+** FAQ
+*** rofi pass hangs after selecting password
+To access passwords your GPG agent needs to have unlocked your secret key you're
+using to encrypt your passwords with. If the secret key hasn't been unlocked yet
+it will prompt for the secret key password using ~pinentry~. If ~pinentry~ is
+configured to read from a ~tty~ then ~rofi-pass~ will hang indefinitely. To fix this
+you need to [[https://wiki.archlinux.org/title/GnuPG#pinentry][configure gpg]] to use a gui version of ~pinentry~. Afterwards you may
+have to kill the GPG agent if it's still in a bad state: ~killall -9 gpg-agent~.
