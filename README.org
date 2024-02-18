@@ -16,7 +16,8 @@ _Features_:
 - Generate and autotype in OTPs
 - Extensive configuration (see [[config.example]])
 
-Use default binding ~Alt+h~ to open help menu if you are lost.
+Use default binding ~Alt+h~ to see available bindings. And pass ~--help~ flag to
+this script to see all available flags.
 
 ** Dependencies
 - [[http://www.passwordstore.org/][pass]]
