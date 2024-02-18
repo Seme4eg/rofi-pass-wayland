@@ -43,24 +43,27 @@ auto_enter='false'
 notify='false'
 
 # default shortcuts
-autotype="Alt+1"
-type_user="Alt+2"
-type_pass="Alt+3"
-open_url="Alt+4"
-type_otp="Alt+5"
-copy_name="Alt+u"
-copy_url="Alt+l"
-copy_pass="Alt+p"
-show="Alt+o"
-copy_menu="Alt+c"
-action_menu="Alt+a"
-type_menu="Alt+t"
 help="Alt+h"
-switch="Alt+x"
-insert_pass="Alt+n"
-qrcode="Alt+q"
-previous_root="Shift+Left"
-next_root="Shift+Right"
+
+kb_type_menu="Alt+t"
+kb_type_pass="Alt+P"
+kb_type_user="Alt+U"
+kb_type_otp="Alt+O"
+kb_autotype="Alt+A"
+
+kb_copy_menu="Alt+c"
+kb_copy_pass="Alt+p"
+kb_copy_user="Alt+u"
+kb_copy_url="Alt+l"
+
+kb_create="Alt+n"
+kb_read="Alt+o"
+kb_update="Alt+a" # and delete
+
+kb_open_url="Alt+4"
+kb_qrcode="Alt+q"
+kb_previous_root="Alt+bracketleft" # [
+kb_next_root="Alt+bracketright" # ]
 
 # --- Functions you can redefine ---
 # rofi command. Make sure to have "$@" as last argument

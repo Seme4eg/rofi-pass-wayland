@@ -6,17 +6,17 @@ actively maintained to i decided to give it a go.
 Main goal - provide needed frontend features for pass and sane codebase while
 still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
 
-** Features
-- Move / copy / delete / edit / create / show entries
+_Features_:
+- Create / Read / Update / Delete / move / copy password store entries
 - Generate new passwords for entries
-- Copy / type individual fields of selected entry
-- Autotype based on autotype field (can be customized)
+- Copy / type individual fields (or autotype based on ~autotype~ field) of selected entry
 - Support for different password store roots (e.g. personal & work)
-- Bookmarks mode (open stored URLs in browser, default: Alt+x)
 - Open URLs of entries with hotkey
 - Generate and display QR code directly in rofi ([[https://fukuchi.org/works/qrencode/][qrencode]] needed).
-- Generate OTP (and also autotype them if desired)
+- Generate and autotype in OTPs
 - Extensive configuration (see [[config.example]])
+
+Use default binding ~Alt+h~ to open help menu if you are lost.
 
 ** Dependencies
 - [[http://www.passwordstore.org/][pass]]
