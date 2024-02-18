@@ -331,7 +331,7 @@ manageEntry () {
 		pass edit "${passentry}"
 	elif [[ "$2" == "move" ]]; then
 		placeholder=$(wrap_placeholder "New path for $passentry")
-		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
+		path=$(passls | _rofi -theme-str "$placeholder")
 		assert_status $?
 
 		notify_w "Moving $passentry to $path ..."
@@ -343,7 +343,7 @@ manageEntry () {
 
 	elif [[ "$2" == "copy" ]]; then
 		placeholder=$(wrap_placeholder "Path for $passentry copy")
-		path=$(list_passwords 2>/dev/null | _rofi -theme-str "$placeholder")
+		path=$(passls | _rofi -theme-str "$placeholder")
 		assert_status $?
 
 		notify_w "Copying $passentry to $path ..."
@@ -428,7 +428,7 @@ createEntry () {
 	cd "$PASSWORD_STORE_DIR" || exit
 
 	placeholder=$(wrap_placeholder "Enter name, must be unique ...")
-	path=$(list_passwords | _rofi -format 'f' -filter "${domain_name}" \
+	path=$(passls | _rofi -format 'f' -filter "${domain_name}" \
 		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
 	assert_status $?
 
@@ -463,7 +463,7 @@ createEntry () {
 		[[ $edit_new_pass == "true" ]] && pass edit "${path}"
 		notify_w "Password entry $path successfully created"
 	else
-		notify_w "Failed to create new password entry $path"
+		notify_w "Failed to create new password entry $path. Is password store initialized?"
 	fi
 }
 
@@ -570,11 +570,13 @@ populate_fields_map() {
 }
 
 # get all password files and output as newline-delimited text
-list_passwords() {
-	cd "${root}" || exit
+passls() {
+	cd "$PASSWORD_STORE_DIR" || return 1
+
 	mapfile -d '' pw_list < <(find -L . -name '*.gpg' -print0)
 	pw_list=("${pw_list[@]#./}")
-	printf '%s\n' "${pw_list[@]%.gpg}" | sort -n
+	printf '%s\n' "${pw_list[@]%.gpg}" | sort | grep -v "^$"
+	return 0
 }
 
 # FIXME: how to move the '-theme-str' part in this funciton
