@@ -169,9 +169,8 @@ mainMenu () {
 	unset fields_map
 }
 
-# FIXME: when done with removing global state, rewrite this func to subshell
-# func() () so the inner vars remain within this subshell
-type() {
+# Use func() () so the inner vars & funcs remain within this subshell
+type() (
 	local passentry="$1"
 	local field="$2"
 
@@ -180,7 +179,6 @@ type() {
 
 	do_type() { sleep $wait; wtype -d ${type_delay} - ; }
 
-	# local autotype
 	autotype () {
 		do_press_key() { wtype -k "$1"; }
 
@@ -195,6 +193,7 @@ type() {
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
 					;;
+				# Also handles non-existant fields prompt by just entering nothing
 				*) printf '%s' "${fields_map[${word}]}" | do_type ;;
 			esac
 		done
@@ -222,7 +221,7 @@ type() {
 		"$AUTOTYPE_FIELD") autotype ;;
 		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
-}
+)
 
 generateQrCode() {
 	local passentry="$1"
@@ -251,9 +250,11 @@ window{
 
 openURL () {
 	local passentry="$1"
-	url=$(pass "$passentry" | grep "${URL_FIELD}: " |
-			    gawk '{sub(/:/,"")}{print $2}1' | head -1)
-	[ -z "$url" ] && exit
+	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
+	if [ -z "$url" ]; then
+	 notify_w "No $URL_FIELD field in $passentry"
+	 exit
+	fi
 	$BROWSER "$url"
 }
 
@@ -385,7 +386,6 @@ generatePass () {
 
 	notify_w "Generating and saving new passwrod for $passentry"
 
-	# XXX: what happens when no length specified? will pass fail?
 	if _generate_pass "$passentry" "$length"; then
 		notify_w "Successfully generated new password for $passentry"
 	else
@@ -471,15 +471,15 @@ helpMenu () {
 	local placeholder
 	placeholder=$(wrap_placeholder "Hint: All hotkeys are configurable in config file")
 	_rofi -theme-str "$placeholder" -mesg "Press Return to exit this menu" <<- EOM
-	${kb_type_menu}: Type custom field
-	${kb_type_user}: Type username
+	${kb_type_menu}: Open 'type' submenu
 	${kb_type_pass}: Type password
+	${kb_type_user}: Type username
 	${kb_type_otp}: Type OTP
-	${kb_autotype}: Autotype based on $AUTOTYPE_FIELD field contents (defaults to $default_autotype)
+	${kb_autotype}: Autotype based on '$AUTOTYPE_FIELD' field contents (defaults to '$default_autotype')
 	---
-	${kb_copy_menu}: Copy Custom Field
-	${kb_copy_pass}: Copy Password
-	${kb_copy_user}: Copy Username
+	${kb_copy_menu}: Open 'copy' submenu
+	${kb_copy_pass}: Copy password
+	${kb_copy_user}: Copy username
 	${kb_copy_url}: Copy URL
 	---
 	${kb_create}: Create new pass entry
@@ -637,10 +637,10 @@ populate_roots () {
 	elif [[ -n $PASSWORD_STORE_DIR ]]; then
 		roots=("$PASSWORD_STORE_DIR")
 	else
+		# NOTE: need to hardcode at least one default root since we need to cd
+		# somewhere to find all password entries
 		roots=("$HOME/.password-store")
 	fi
-
-	PASSWORD_STORE_DIR=${roots[$root_index]}
 }
 
 main () {
@@ -652,6 +652,7 @@ main () {
 	declare -a roots
 	declare root_index=0
 	populate_roots "$@"
+	PASSWORD_STORE_DIR=${roots[$root_index]}
 
 	# TODO: see which flags make sence to be added here instead of deprecated
 	# 'default_do'
