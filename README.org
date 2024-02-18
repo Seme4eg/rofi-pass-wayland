@@ -22,11 +22,11 @@ Use default binding ~Alt+h~ to see available bindings. And pass ~--help | -h~ fl
 this script to see all available flags.
 
 ** Dependencies
-- [[http://www.passwordstore.org/][pass]]
-- [[https://github.com/lbonn/rofi][rofi]]
+- [[http://www.passwordstore.org/][ZX2C4 pass]]
+- [[https://github.com/lbonn/rofi][rofi-wayland]]
 - wtype
 - wl-clipboard
-- find
+- [[https://fukuchi.org/works/qrencode/][qrencode]] (optional: for generating and displaying pass qrcode)
 - [[https://github.com/tadfisher/pass-otp][pass-otp]] (optional: for OTPs)
 
 ** Configuration
@@ -34,7 +34,6 @@ Presedence:
 - ~ROFI_PASS_CONFIG~ env var. You can set the environment variable like this:
   ~ROFI_PASS_CONFIG="/path/to/config" rofi-pass~
 - =$HOME/.config/rofi-pass/config=
-- =/etc/rofi-pass.conf=
 - internal default values
 
 See example configuration in [[config.example]] file.
