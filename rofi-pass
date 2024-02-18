@@ -464,6 +464,7 @@ createEntry () {
 
 	placeholder=$(wrap_placeholder "Type password or hit Enter to generate one")
 	pw=$(printf '%s' "Generate" | _rofi -password -theme-str "$placeholder")
+	assert_status $?
 
 	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}")
 	[[ $url == http* ]] && pass_content+=("${URL_FIELD}: ${url}")
