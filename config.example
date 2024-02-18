@@ -1,8 +1,17 @@
 # Config example (also default values)
 
-# permanently set alternative root dir. Use ":" to separate multiple roots
-# which can be switched at runtime with shift+left/right
-# root=/path/to/root
+# Set alternative password store dirs. Use ":" to separate multiple roots.
+# Can be switched at runtime with with corresponding hotkeys
+# ROOTS=/path/to/root_one:/path/to/root_two
+
+# You can define password store env vars here and they will be sourced in
+# the script and applied to all pass commands called. Like:
+# PASSWORD_STORE_CLIP_TIME=30
+# PASSWORD_STORE_GENERATED_LENGTH=13
+
+# Same way you can define other env vars that pass is using:
+# EDITOR='vim -x'
+# BROWSER= # defaults to 'xdg-open' if absent
 
 # Fields to be used
 URL_FIELD='url'
@@ -11,10 +20,6 @@ AUTOTYPE_FIELD='autotype'
 OTPMETHOD_FIELD='otp_method'
 
 BACK_OPTION='< back'
-
-## Programs to be used
-EDITOR='vim -x' # Editor
-BROWSER='xdg-open' # Browser
 
 # delay to be used for :delay keyword
 delay=2
@@ -59,7 +64,8 @@ kb_qrcode="Alt+q"
 kb_previous_root="Alt+bracketleft" # [
 kb_next_root="Alt+bracketright" # ]
 
-# --- Functions you can redefine ---
+# --- Customisable functions ---
+
 # rofi command. Make sure to have "$@" as last argument
 # _rofi () {
 # 	rofi -no-auto-select -i -dmenu "$@"

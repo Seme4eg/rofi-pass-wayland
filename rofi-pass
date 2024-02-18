@@ -3,15 +3,22 @@
 # rofi-pass
 # (c) 2015 Rasmus Steinke <rasi@xssn.at>
 
-basecommand="$0"
-
 ###############################################################################
 #              Config defaults (in case user doesn't copies one)              #
 ###############################################################################
 
-# permanently set alternative root dir. Use ":" to separate multiple roots
-# which can be switched at runtime with shift+left/right
-# root=/path/to/root
+# Set alternative password store dirs. Use ":" to separate multiple roots.
+# Can be switched at runtime with with corresponding hotkeys
+# ROOTS=/path/to/root_one:/path/to/root_two
+
+# You can define password store env vars here and they will be sourced in
+# the script and applied to all pass commands called. Like:
+# PASSWORD_STORE_CLIP_TIME=30
+# PASSWORD_STORE_GENERATED_LENGTH=13
+
+# Same way you can define other env vars that pass is using:
+# EDITOR='vim -x'
+# BROWSER= # defaults to 'xdg-open' if absent
 
 # Fields to be used
 URL_FIELD='url'
@@ -20,10 +27,6 @@ AUTOTYPE_FIELD='autotype'
 OTPMETHOD_FIELD='otp_method'
 
 BACK_OPTION='< back'
-
-## Programs to be used
-EDITOR='vim -x' # Editor
-BROWSER='xdg-open' # Browser
 
 # delay to be used for :delay keyword
 delay=2
@@ -108,12 +111,12 @@ mainMenu () {
 		-kb-custom-17 "${kb_next_root}"
 	)
 
-	if [[ ${#roots[@]} -gt "1" || $custom_root == "true" ]]; then
-		args+=(-mesg "PW Store: ${root}")
-	fi
+	local placeholder
+	placeholder=$(wrap_placeholder  "Current store: $PASSWORD_STORE_DIR")
+	args+=(-theme-str "$placeholder")
 
 	local passentry
-	passentry="$(list_passwords 2>/dev/null | _rofi "${args[@]}")"
+	passentry="$(passls | _rofi "${args[@]}")"
 
 	rofi_exit=$?
 
@@ -122,15 +125,17 @@ mainMenu () {
 	case $rofi_exit in
 		1) exit ;;
 		10) helpMenu; return;;
-		25)
-			roots_index=$(( (roots_index-1+roots_length) % roots_length))
-			root=${roots[$roots_index]}
+		25) # next root
+			roots_length=${#roots[@]}
+			root_index=$(( (root_index-1+roots_length) % roots_length))
+			PASSWORD_STORE_DIR=${roots[$root_index]}
 			mainMenu
 			return
 			;;
-		26)
-			roots_index=$(( (roots_index+1) % roots_length))
-			root=${roots[$roots_index]}
+		26) # previous root
+			roots_length=${#roots[@]}
+			root_index=$(( (root_index+1) % roots_length))
+			PASSWORD_STORE_DIR=${roots[$root_index]}
 			mainMenu
 			return
 			;;
@@ -322,8 +327,6 @@ updateEntry () {
 manageEntry () {
 	local passentry="$1"
 
-	cd "${root}" || exit
-
 	if [[ "$2" == "edit" ]]; then
 		pass edit "${passentry}"
 	elif [[ "$2" == "move" ]]; then
@@ -421,14 +424,20 @@ createEntry () {
 		help_content="Hint: Copy URL to clipboard before calling this menu."
 	fi
 
-	cd "${root}" || exit
+	# needs to be checked here since this f-n may be called directly from 'main'
+	cd "$PASSWORD_STORE_DIR" || exit
 
 	placeholder=$(wrap_placeholder "Enter name, must be unique ...")
 	path=$(list_passwords | _rofi -format 'f' -filter "${domain_name}" \
 		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
 	assert_status $?
 
-	[ -z "$path" ] && notify_w "No empty path allowed" && createEntry
+	if [ -z "$path" ]; then
+		notify_w "No empty path allowed"
+		createEntry
+		exit
+	fi
+
 
 	local _user="$default_user"
 	[[ "$_user" == ":basename" ]] && _user="$(basename "$path")"
@@ -588,7 +597,7 @@ help_msg () {
 
 	Commands:
 	--create         create new entry to password store
-	--root           set custom root directories (colon separated)
+	--roots          set custom root directories (colon separated)
 EOF
 }
 
@@ -615,40 +624,44 @@ load_config () {
 	done
 }
 
-# FIXME: either don't globalise or make the roots logic more clear
-set_roots () {
-	if [[ -n "$2" && "$1" == "--root" ]]; then
-		custom_root=true; IFS=: read -r -a roots <<< "$2"
-	elif [[ -n ${PASSWORD_STORE_DIR} ]]; then
-		roots=("${PASSWORD_STORE_DIR}")
+populate_roots () {
+	local IFS=:
+
+	# Precedense: flag -> config -> pass DIR var -> default $HOME/.password-store
+	if [[ "$1" == "--root" && -n "$2" ]]; then
+		read -r -a roots <<< "$2"
+	elif [[ -n "$ROOTS" ]]; then # config var
+    read -r -a roots <<< "$ROOTS"
+	elif [[ -n $PASSWORD_STORE_DIR ]]; then
+		roots=("$PASSWORD_STORE_DIR")
 	else
 		roots=("$HOME/.password-store")
 	fi
-	roots_index=0
-	roots_length=${#roots[@]}
-	export root=${roots[$roots_index]}
-	export PASSWORD_STORE_DIR="${root}"
+
+	PASSWORD_STORE_DIR=${roots[$root_index]}
 }
 
 main () {
 	load_config
 
 	# check for BROWSER variable, use xdg-open as fallback
-	[[ -z $BROWSER ]] && export BROWSER=xdg-open
+	[[ -z $BROWSER ]] && BROWSER=xdg-open
 
-	# if user has defined his own editor in config file - use it for this script
-	[[ -n $EDITOR ]] && export EDITOR=$EDITOR
-
-	set_roots "$@"
+	declare -a roots
+	declare root_index=0
+	populate_roots "$@"
 
 	# TODO: see which flags make sence to be added here instead of deprecated
 	# 'default_do'
 	# menu, copy menu, type menu, showEntry, actionMenu, openUrl
 	case $1 in
 		--create) createEntry ;;
-		--help) help_msg ;;
+		--help | -h) help_msg ;;
 		*) mainMenu ;;
 	esac
 }
 
 main "$@"
+
+# TODO: instead of previous bookmarks functionality utilize 'pass grep $url_field'
+# to grep and output all urls of the password store and on enter open them
