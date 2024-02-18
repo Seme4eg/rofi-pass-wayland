@@ -6,6 +6,8 @@ actively maintained to i decided to give it a go.
 Main goal - provide needed frontend features for pass and sane codebase while
 still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
 
+[[assets/demo.gif]]
+
 _Features_:
 - Create / Read / Update / Delete / move / copy password store entries
 - Generate new passwords for entries
@@ -16,7 +18,7 @@ _Features_:
 - Generate and autotype in OTPs
 - Extensive configuration (see [[config.example]])
 
-Use default binding ~Alt+h~ to see available bindings. And pass ~--help~ flag to
+Use default binding ~Alt+h~ to see available bindings. And pass ~--help | -h~ flag to
 this script to see all available flags.
 
 ** Dependencies
