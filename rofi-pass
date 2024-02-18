@@ -522,6 +522,10 @@ assert_status() { [ "$1" -eq 1 ] && exit; }
 populate_fields_map() {
 	local passentry="$1"
 
+	# check if user propmt exists in the store
+	output=$(pass show "$passentry" 2>&1)
+	[ "$?" -eq 1 ] && notify_w "$output" && exit
+	
 	# get an array of password file fields like url: user: and custom ones
 	local -a password_temp
 	mapfile -t password_temp < <(pass show "$passentry")
