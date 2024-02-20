@@ -204,7 +204,7 @@ entry_menu () {
 		-kb-custom-3 "$kb_copy_field"
 		-kb-custom-4 "$kb_rename"
 		-kb-custom-5 "$kb_delete"
-		-kb-custom-5 "$kb_edit"
+		-kb-custom-6 "$kb_edit"
 		-kb-custom-7 "$kb_generate"
 		# TODO:
 		# -kb-custom-16 "$kb_browse_url"
@@ -231,9 +231,9 @@ entry_menu () {
 		12 | "$copy_menu") _copy menu ;;
 		13 | "$rename") rename_entry "$passentry" ;;
 		"$copy") copy_entry "$passentry" ;;
-		15 | "$delete") delete_entry "$passentry" ;;
-		16 | "$edit") edit_entry "$passentry" ;;
-		17 | "$generate") generate_pass "$passentry" ;;
+		14 | "$delete") delete_entry "$passentry" ;;
+		15 | "$edit") edit_entry "$passentry" ;;
+		16 | "$generate") generate_pass "$passentry" ;;
 		"$BACK_OPTION") main_menu ;;
 		*) exit ;;
 	esac
