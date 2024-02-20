@@ -18,7 +18,7 @@
 
 # Same way you can define other env vars that pass is using:
 # EDITOR='vim -x'
-# BROWSER= # defaults to 'xdg-open' if absent
+# BROWSER= # default: xdg-open
 
 # Fields to be used
 URL_FIELD='url'
@@ -26,7 +26,7 @@ USERNAME_FIELD='user'
 AUTOTYPE_FIELD='autotype'
 OTPMETHOD_FIELD='otp_method'
 
-BACK_OPTION='< back'
+BACK_OPTION='← back'
 
 # delay to be used for :delay keyword
 delay=2
@@ -51,22 +51,26 @@ notify='false'
 # default shortcuts
 help="Alt+h"
 
-kb_type_menu="Alt+t"
+kb_type_field="Alt+t"
 kb_type_pass="Alt+P"
-kb_type_user="Alt+U"
+kb_type_user="Alt+N"
 kb_type_otp="Alt+O"
 kb_autotype="Alt+A"
 
-kb_copy_menu="Alt+c"
+kb_copy_field="Alt+c"
 kb_copy_pass="Alt+p"
-kb_copy_user="Alt+u"
-kb_copy_url="Alt+l"
+kb_copy_user="Alt+n"
 
-kb_create="Alt+n"
-kb_read="Alt+o"
-kb_update="Alt+a" # and delete
+kb_insert="Alt+i"
+kb_show="Alt+o"
 
-kb_open_url="Alt+4"
+# Actions
+kb_rename="Alt+r"
+kb_delete="Alt+x"
+kb_edit="Alt+e"
+kb_generate="Alt+I"
+
+kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
 kb_previous_root="Alt+bracketleft" # [
 kb_next_root="Alt+bracketright" # ]
@@ -85,30 +89,34 @@ _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 #                               Action functions                              #
 ###############################################################################
 
-mainMenu () {
+main_menu () {
 	args=(
 		# Same sequence as in above config section !
-		-kb-custom-1 "${help}"
+		-kb-custom-1 "$help"
 
-		-kb-custom-2 "${kb_type_menu}"
-		-kb-custom-3 "${kb_type_pass}"
-		-kb-custom-4 "${kb_type_user}"
-		-kb-custom-5 "${kb_type_otp}"
-		-kb-custom-6 "${kb_autotype}"
+		-kb-custom-2 "$kb_type_field"
+		-kb-custom-3 "$kb_type_pass"
+		-kb-custom-4 "$kb_type_user"
+		-kb-custom-5 "$kb_type_otp"
+		-kb-custom-6 "$kb_autotype"
 
-		-kb-custom-7 "${kb_copy_menu}"
-		-kb-custom-8 "${kb_copy_pass}"
-		-kb-custom-9 "${kb_copy_user}"
-		-kb-custom-10 "${kb_copy_url}"
+		-kb-custom-7 "$kb_copy_field"
+		-kb-custom-8 "$kb_copy_pass"
+		-kb-custom-9 "$kb_copy_user"
 
-		-kb-custom-11 "${kb_create}"
-		-kb-custom-12 "${kb_read}"
-		-kb-custom-13 "${kb_update}"
+		-kb-custom-10 "$kb_insert"
+		-kb-custom-11 "$kb_show"
 
-		-kb-custom-14 "${kb_open_url}"
-		-kb-custom-15 "${kb_qrcode}"
-		-kb-custom-16 "${kb_previous_root}"
-		-kb-custom-17 "${kb_next_root}"
+		-kb-custom-12 "$kb_rename"
+		-kb-custom-13 "$kb_delete"
+		-kb-custom-14 "$kb_edit"
+		-kb-custom-15 "$kb_generate"
+
+		-kb-custom-16 "$kb_browse_url"
+		-kb-custom-17 "$kb_qrcode"
+		-kb-custom-18 "$kb_previous_root"
+		-kb-custom-19 "$kb_next_root"
+		# 19 custom keybinds is max, custom statuses form rofi can be from 10 to 28
 	)
 
 	local placeholder
@@ -124,19 +132,19 @@ mainMenu () {
 	# The exit code for -kb-custom-X is X+9.
 	case $rofi_exit in
 		1) exit ;;
-		10) helpMenu; return;;
-		25) # next root
+		10) help_menu; return;;
+		27) # next root
 			roots_length=${#roots[@]}
 			root_index=$(( (root_index-1+roots_length) % roots_length))
 			PASSWORD_STORE_DIR=${roots[$root_index]}
-			mainMenu
+			main_menu
 			return
 			;;
-		26) # previous root
+		28) # previous root
 			roots_length=${#roots[@]}
 			root_index=$(( (root_index+1) % roots_length))
 			PASSWORD_STORE_DIR=${roots[$root_index]}
-			mainMenu
+			main_menu
 			return
 			;;
 	esac
@@ -147,30 +155,109 @@ mainMenu () {
 	# Actions that do need the entry
 	# The exit code for -kb-custom-X is X+9.
 	case "${rofi_exit}" in
-		0 | 11) type "$passentry" 'menu' ;;
-		12) type "$passentry" 'pass' ;;
-		13) type "$passentry" "$USERNAME_FIELD" ;;
-		14) type "$passentry" 'OTP' ;;
-		15) type "$passentry" "$AUTOTYPE_FIELD" ;;
+		0) entry_menu "$passentry" ;;
+		11) _type "$passentry" menu ;;
+		12) _type "$passentry" pass ;;
+		13) _type "$passentry" "$USERNAME_FIELD" ;;
+		14) _type "$passentry" OTP ;;
+		15) _type "$passentry" "$AUTOTYPE_FIELD" ;;
 
-		16) copy 'menu' ;;
-		17) copy 'pass' ;;
-		18) copy $USERNAME_FIELD ;;
-		19) copy $URL_FIELD ;;
+		16) _copy menu ;;
+		17) _copy pass ;;
+		18) _copy $USERNAME_FIELD ;;
 
-		20) createEntry ;;
-		21) showEntry ;;
-		22) updateEntry "$passentry";;
+		19) insert_entry ;;
+		20) show_entry ;;
 
-		23) openURL "$passentry" ;;
-		24) generateQrCode "$passentry" ;;
+		21) rename_entry "$passentry" ;;
+		22) delete_entry "$passentry" ;;
+		23) edit_entry "$passentry" ;;
+		24) generate_pass "$passentry" ;;
+
+		25) browse_url "$passentry" ;;
+		26) generate_qr_code "$passentry" ;;
+		*)
+			unset fields_map
+			exit
 	esac
 
-	unset fields_map
+}
+
+entry_menu () {
+	local passentry="$1"
+
+	local show="Show ($kb_show)"
+	local type_menu="Type field / autotype ($kb_type_field)"
+	local copy_menu="Copy field ($kb_copy_field)"
+	local rename="Rename ($kb_rename)"
+	local copy="Copy"
+	local delete="Delete ($kb_delete)"
+	local edit="Edit ($kb_edit)"
+	local generate="Generate ($kb_generate)"
+
+	actions=("$show" "$type_menu" "$copy_menu" "$rename" "$copy" "$delete" "$edit"
+					 "$generate" "$BACK_OPTION")
+
+	args=(
+		-kb-custom-1 "$kb_show"
+		-kb-custom-2 "$kb_type_field"
+		-kb-custom-3 "$kb_copy_field"
+		-kb-custom-4 "$kb_rename"
+		-kb-custom-5 "$kb_delete"
+		-kb-custom-5 "$kb_edit"
+		-kb-custom-7 "$kb_generate"
+		# TODO:
+		# -kb-custom-16 "$kb_browse_url"
+		# -kb-custom-17 "$kb_qrcode"
+	)
+
+	local placeholder
+	placeholder=$(wrap_placeholder "Choose action (displayed hotkeys also work from main menu)")
+	args+=(-theme-str "$placeholder")
+
+	local action
+	action=$(printf '%s\n' "${actions[@]}" | _rofi "${args[@]}")
+
+	rofi_exit=$?
+	echo $rofi_exit
+
+	# pressed keybinding is more important than selected entry
+	[ "$rofi_exit" -ne 0 ] && action="$rofi_exit"
+	echo
+
+	case $action in
+		10 | "$show") show_entry ;;
+		11 | "$type_menu") _type "$passentry" menu ;;
+		12 | "$copy_menu") _copy menu ;;
+		13 | "$rename") rename_entry "$passentry" ;;
+		"$copy") copy_entry "$passentry" ;;
+		15 | "$delete") delete_entry "$passentry" ;;
+		16 | "$edit") edit_entry "$passentry" ;;
+		17 | "$generate") generate_pass "$passentry" ;;
+		"$BACK_OPTION") main_menu ;;
+		*) exit ;;
+	esac
+}
+
+generate_otp () {
+	local passentry="$1"
+
+	# First, we check if there is a non-conventional OTP command in the pass file
+	_check_otp_cmd() {
+		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
+	}
+
+	if _check_otp_cmd; then
+		# We execute the commands after otp_method: AS-IS
+		bash -c "$(_check_otp_cmd)"
+	else
+		# If there is no method defined, fallback to pass-otp
+		pass otp "$passentry"
+	fi
 }
 
 # Use func() () so the inner vars & funcs remain within this subshell
-type() (
+_type() (
 	local passentry="$1"
 	local field="$2"
 
@@ -188,7 +275,7 @@ type() (
 				":space") do_press_key space ;;
 				":delay") sleep "${delay}" ;;
 				":enter") do_press_key Return ;;
-				":otp") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+				":otp") printf '%s' "$(generate_otp "$passentry")" | do_type ;;
 				"pass") printf '%s' "${fields_map[pass]}" | do_type ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
@@ -213,69 +300,17 @@ type() (
 						    _rofi -theme-str "$placeholder")
 			assert_status $?
 
-			type "$passentry" "$field"
+			_type "$passentry" "$field"
 			;;
 		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | do_type ;;
 		pass) printf '%s' "${fields_map[pass]}" | do_type ;;
-		"OTP") printf '%s' "$(generateOTP "$passentry")" | do_type ;;
+		"OTP") printf '%s' "$(generate_otp "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autotype ;;
 		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
 )
 
-generateQrCode() {
-	local passentry="$1"
-	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
-
-	has_qrencode() { command -v qrencode >/dev/null 2>&1; }
-
-	if ! has_qrencode; then
-		printf '%s\n' "qrencode not found" | _rofi
-		assert_status $?
-		mainMenu
-	fi
-
-	pass "$passentry" | head -n 1 |
-		qrencode -t png -o "$qrcode_path" -l H -s 25 -m 2 --dpi=192 -v 8
-
-	_rofi -theme-str "
-entry{enabled:false;}
-textbox-prompt-colon{str:\"\";}
-window{
-  border-radius:6mm; padding:1mm; width:100mm; height:100mm;
-  background-image:url(\"$qrcode_path\",both);
-}"
-	rm -f "$qrcode_path"
-}
-
-openURL () {
-	local passentry="$1"
-	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
-	if [ -z "$url" ]; then
-	 notify_w "No $URL_FIELD field in $passentry"
-	 exit
-	fi
-	$BROWSER "$url"
-}
-
-generateOTP () {
-	local passentry="$1"
-
-	# First, we check if there is a non-conventional OTP command in the pass file
-	_check_otp_cmd() {
-		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
-	}
-
-	if _check_otp_cmd; then
-		# We execute the commands after otp_method: AS-IS
-		bash -c "$(_check_otp_cmd)"
-	else
-		# If there is no method defined, fallback to pass-otp
-		pass otp "$passentry"
-	fi
-}
-
-copy() {
+_copy() {
 	local field="$1"
 	local passentry="$2" # is not always passed
 
@@ -290,94 +325,74 @@ copy() {
 
 			assert_status $?
 
-			copy "$field"
+			_copy "$field"
 		  ;;
 		"pass")
 			pass -c "$passentry"
-			notify_w "Copied $field field\nClearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
+			notify_w "Copied $field field\n_clearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
 			;;
 		*) printf '%s' "${fields_map[$field]}" | wl-copy &&
 				 notify_w "Copied $field field" ;;
 	esac
 }
 
-# receives current password entry as a parameter
-updateEntry () {
-	local move="Move"
-	local copy="Copy"
-	local delete="Delete"
-	local edit="Edit"
-	local generate="Generate new"
+rename_entry() {
+	placeholder=$(wrap_placeholder "New path for $1")
+	path=$(passls | _rofi -theme-str "$placeholder")
+	assert_status $?
 
-	actions=("$move" "$copy" "$delete" "$edit" "$generate" "$BACK_OPTION")
+	notify_w "Moving $1 to $path ..."
+	if pass mv "$1" "$path"; then
+		notify_w "Successfully renamed $1 to $path"
+	else
+		notify_w "Failed to rename $1 to $path"
+	fi
+}
 
-	placeholder=$(wrap_placeholder "Choose action")
-	action=$(printf '%s\n' "${actions[@]}" | _rofi -theme-str "$placeholder")
+copy_entry() {
+	local placeholder
+	placeholder=$(wrap_placeholder "Path for $1 copy")
+	path=$(passls | _rofi -theme-str "$placeholder")
+	assert_status $?
 
-	case $action in
-		"$move") manageEntry "$1" move ;;
-		"$delete") manageEntry "$1" delete ;;
-		"$copy") manageEntry "$1" copy ;;
-		"$edit") manageEntry "$1" edit ;;
-		"$generate") generatePass "$1" ;;
-		"$BACK_OPTION") mainMenu ;;
-		*) exit ;;
+	notify_w "Copying $1 to $path ..."
+	if pass cp "$1" "$path"; then
+		notify_w "Successfully copied $1 to $path"
+	else
+		notify_w "Failed copying $1 to $path"
+	fi
+}
+
+delete_entry() {
+	local ask_content=("yes" "no")
+	local placeholder
+	placeholder=$(wrap_placeholder "Delete $1?")
+	ask=$(printf '%s\n' "${ask_content[@]}" | _rofi -theme-str "$placeholder")
+	assert_status $?
+
+	case $ask in
+		"yes")
+			notify_w "Deleting $1 ..."
+			if pass rm --force "$1"; then
+				notify_w "Successfully deleted $1"
+			else
+				notify_w "Failed to delete $1"
+			fi
+			;;
+		*) main_menu ;;
 	esac
 }
 
-manageEntry () {
-	local passentry="$1"
-
-	if [[ "$2" == "edit" ]]; then
-		pass edit "${passentry}"
-	elif [[ "$2" == "move" ]]; then
-		placeholder=$(wrap_placeholder "New path for $passentry")
-		path=$(passls | _rofi -theme-str "$placeholder")
-		assert_status $?
-
-		notify_w "Moving $passentry to $path ..."
-		if pass mv "$passentry" "$path"; then
-			notify_w "Successfully moved $passentry to $path"
-		else
-			notify_w "Failed to move $passentry to $path"
-		fi
-
-	elif [[ "$2" == "copy" ]]; then
-		placeholder=$(wrap_placeholder "Path for $passentry copy")
-		path=$(passls | _rofi -theme-str "$placeholder")
-		assert_status $?
-
-		notify_w "Copying $passentry to $path ..."
-		if pass cp "$passentry" "$path"; then
-			notify_w "Successfully copied $passentry to $path"
-		else
-			notify_w "Failed copying $passentry to $path"
-		fi
-
-	elif [[ "$2" == "delete" ]]; then
-		ask_content=("yes" "no")
-		placeholder=$(wrap_placeholder "Delete $passentry?")
-		ask=$(printf '%s\n' "${ask_content[@]}" | _rofi -theme-str "$placeholder")
-		assert_status $?
-
-		case $ask in
-			"yes")
-				notify_w "Deleting $passentry ..."
-				if pass rm --force "$passentry"; then
-					notify_w "Successfully deleted $passentry"
-				else
-					notify_w "Failed to delete $passentry"
-				fi
-				;;
-			"no") mainMenu ;;
-			*) exit ;;
-		esac
+edit_entry() {
+	notify_w "Updating $1 ..."
+	if pass edit "${1}"; then
+		notify_w "Successfully updated $1"
+	else
+		notify_w "Failed to update $1"
 	fi
-
-	mainMenu
 }
 
-generatePass () {
+generate_pass () {
 	local passentry="$1"
 
 	placeholder=$(wrap_placeholder "Password length (leave empty for pass default):")
@@ -393,7 +408,7 @@ generatePass () {
 	fi
 }
 
-showEntry () {
+show_entry () {
 	local content
 	local -a lines
 	for key in "${!fields_map[@]}"; do lines+=("${key}: ${fields_map[$key]}"); done
@@ -406,14 +421,14 @@ showEntry () {
 	field=$(printf '%s' "$selection" | cut -d':' -f 1)
 
 	case $field in
-		"$BACK_OPTION") mainMenu ;;
-		*) copy "$field" ;;
+		"$BACK_OPTION") main_menu ;;
+		*) _copy "$field" ;;
 	esac
 
 	exit
 }
 
-createEntry () {
+insert_entry () {
 	url=$(wl-paste)
 
 	if [[ "${url:0:4}" == "http" ]]; then
@@ -434,7 +449,7 @@ createEntry () {
 
 	if [ -z "$path" ]; then
 		notify_w "No empty path allowed"
-		createEntry
+		insert_entry
 		exit
 	fi
 
@@ -461,32 +476,71 @@ createEntry () {
 	if [ $? == 0 ]; then
 		[[ $pw == "Generate" ]] && _generate_pass "$path"
 		[[ $edit_new_pass == "true" ]] && pass edit "${path}"
-		notify_w "Password entry $path successfully created"
+		notify_w "Password entry $path successfully inserted"
 	else
-		notify_w "Failed to create new password entry $path. Is password store initialized?"
+		notify_w "Failed to insert new password entry $path. Is password store initialized?"
 	fi
 }
 
-helpMenu () {
+# TODO: deprecate (including keybinding) in favor of upcoming 'pass urls' menu
+browse_url () {
+	local passentry="$1"
+	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
+	if [ -z "$url" ]; then
+		notify_w "No $URL_FIELD field in $passentry"
+		exit
+	fi
+	$BROWSER "$url"
+}
+
+generate_qr_code() {
+	local passentry="$1"
+	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
+
+	has_qrencode() { command -v qrencode >/dev/null 2>&1; }
+
+	if ! has_qrencode; then
+		printf '%s\n' "qrencode not found" | _rofi
+		assert_status $?
+		main_menu
+	fi
+
+	pass "$passentry" | head -n 1 |
+		qrencode -t png -o "$qrcode_path" -l H -s 25 -m 2 --dpi=192 -v 8
+
+	_rofi -theme-str "
+entry{enabled:false;}
+textbox-prompt-colon{str:\"\";}
+window{
+  border-radius:6mm; padding:1mm; width:100mm; height:100mm;
+  background-image:url(\"$qrcode_path\",both);
+}"
+	rm -f "$qrcode_path"
+}
+
+help_menu () {
 	local placeholder
 	placeholder=$(wrap_placeholder "Hint: All hotkeys are configurable in config file")
 	_rofi -theme-str "$placeholder" -mesg "Press Return to exit this menu" <<- EOM
-	${kb_type_menu}: Open 'type' submenu
+	${kb_type_field}: Type field / autotype
 	${kb_type_pass}: Type password
 	${kb_type_user}: Type username
 	${kb_type_otp}: Type OTP
 	${kb_autotype}: Autotype based on '$AUTOTYPE_FIELD' field contents (defaults to '$default_autotype')
 	---
-	${kb_copy_menu}: Open 'copy' submenu
+	${kb_copy_field}: Copy field ..
 	${kb_copy_pass}: Copy password
 	${kb_copy_user}: Copy username
-	${kb_copy_url}: Copy URL
 	---
-	${kb_create}: Create new pass entry
-	${kb_read}: Show pass entry
-	${kb_update}: Edit, copy, move, delete, generate submenu
+	${kb_insert}: Insert new entry
+	${kb_show}: Show entry
 	---
-	${kb_open_url}: Open URL
+	${kb_rename}: Rename entry
+	${kb_delete}: Delete entry
+	${kb_edit}: Edit entry
+	${kb_generate}: Generate entry
+	---
+	${kb_browse_url}: Browse URL
 	${kb_qrcode}: Generate and display qrcode
 	${kb_previous_root}: Switch to previous password store root
 	${kb_next_root}: Switch to next password store root
@@ -494,7 +548,7 @@ EOM
 
 	assert_status $?
 
-	mainMenu
+	main_menu
 }
 
 
@@ -503,22 +557,14 @@ EOM
 ###############################################################################
 
 # convenience _notify wrapper to skip all those checks everywhere
-notify_w() {
-	notify_on && _notify "$1"
-}
+notify_w() { notify_on && _notify "$1"; }
 
-notify_on() {
-	if [[ $notify == "true" ]]; then
-		return 0
-	else
-		return 1
-	fi
-}
+notify_on() { [[ $notify == "true" ]]; }
 
 assert_status() { [ "$1" -eq 1 ] && exit; }
 
-# Is called only in mainMenu, populates 'fields_map' var that is visible to all
-# function that mainMenu calls.
+# Is called only in main_menu, populates 'fields_map' var that is visible to all
+# function that main_menu calls.
 populate_fields_map() {
 	local passentry="$1"
 
@@ -554,13 +600,7 @@ populate_fields_map() {
 			esac
 
 			[[ -n "$_id" ]] && fields_map["${_id}"]=${_val}
-		done < <(printf '%s\n' "${fields}")
-
-		if test "${fields_map['autotype']+autotype}"; then
-			:
-		else
-			fields_map["autotype"]="${USERNAME_FIELD} :tab pass"
-		fi
+		done < <(printf '%s\n' "$fields")
 	fi
 
 	if [[ -z "${fields_map["${USERNAME_FIELD}"]}" && -n $default_user ]]; then
@@ -602,7 +642,7 @@ help_msg () {
 	rofi-pass [command]
 
 	Commands:
-	--create         create new entry to password store
+	--insert         insert new entry to password store
 	--roots          set custom root directories (colon separated)
 EOF
 }
@@ -623,7 +663,7 @@ load_config () {
 
 	for config in "${configs[@]}"; do
 		# '-n' is needed in case ROFI_PASS_CONFIG is not set
-		if [[ -n "${config}" && -f "${config}" ]]; then
+		if [[ -n "$config" && -f "$config" ]]; then
 			source "$config"
 			return
 		fi
@@ -660,11 +700,11 @@ main () {
 
 	# TODO: see which flags make sence to be added here instead of deprecated
 	# 'default_do'
-	# menu, copy menu, type menu, showEntry, actionMenu, openUrl
+	# menu, copy menu, type menu, show_entry, action_menu, open_url
 	case $1 in
-		--create) createEntry ;;
+		--insert) insert_entry ;;
 		--help | -h) help_msg ;;
-		*) mainMenu ;;
+		*) main_menu ;;
 	esac
 }
 
