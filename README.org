@@ -8,6 +8,10 @@ still keeping it just a bash script that you can just use on its own. Good old c
 
 [[assets/demo.gif]]
 
+Password entry submenu:
+
+[[./assets/demo.png]]
+
 _Features_:
 - Create / Read / Update / Delete / move / copy password store entries
 - Generate new passwords for entries
