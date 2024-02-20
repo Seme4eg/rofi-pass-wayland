@@ -44,22 +44,26 @@ notify='false'
 # default shortcuts
 help="Alt+h"
 
-kb_type_menu="Alt+t"
+kb_type_field="Alt+t"
 kb_type_pass="Alt+P"
-kb_type_user="Alt+U"
+kb_type_user="Alt+N"
 kb_type_otp="Alt+O"
 kb_autotype="Alt+A"
 
-kb_copy_menu="Alt+c"
+kb_copy_field="Alt+c"
 kb_copy_pass="Alt+p"
-kb_copy_user="Alt+u"
-kb_copy_url="Alt+l"
+kb_copy_user="Alt+n"
 
-kb_create="Alt+n"
-kb_read="Alt+o"
-kb_update="Alt+a" # and delete
+kb_insert="Alt+i"
+kb_show="Alt+o"
 
-kb_open_url="Alt+4"
+# Actions
+kb_rename="Alt+r"
+kb_delete="Alt+x"
+kb_edit="Alt+e"
+kb_generate="Alt+I"
+
+kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
 kb_previous_root="Alt+bracketleft" # [
 kb_next_root="Alt+bracketright" # ]
