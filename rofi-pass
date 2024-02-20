@@ -501,8 +501,9 @@ browse_url () {
 	local passentry="$1"
 	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
 	if [ -z "$url" ]; then
-		notify_w "No $URL_FIELD field in $passentry"
-		exit
+		printf '%s\n' "No $URL_FIELD field in $passentry" | _rofi
+		assert_status $?
+		main_menu
 	fi
 	$BROWSER "$url"
 }
