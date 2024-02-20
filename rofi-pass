@@ -38,7 +38,7 @@ type_delay=12
 ## Options for generating new password entries
 # open new password entries in editor
 edit_new_pass="true"
-# set to ':basename' for user field to be set to password file name
+# set to ':basename' for user field to be set to password basename
 default_user="$(whoami)"
 default_user2=""
 
@@ -75,7 +75,7 @@ kb_qrcode="Alt+q"
 kb_previous_root="Alt+bracketleft" # [
 kb_next_root="Alt+bracketright" # ]
 
-# --- User redefinable functions ---
+# --- Customisable functions ---
 
 _rofi () { rofi -no-auto-select -i -dmenu "$@"; }
 
@@ -175,7 +175,7 @@ main_menu () {
 		24) generate_pass "$passentry" ;;
 
 		25) browse_url "$passentry" ;;
-		26) generate_qr_code "$passentry" ;;
+		26) generate_qr "$passentry" ;;
 		*)
 			unset fields_map
 			exit
@@ -190,13 +190,16 @@ entry_menu () {
 	local type_menu="Type field / autotype ($kb_type_field)"
 	local copy_menu="Copy field ($kb_copy_field)"
 	local rename="Rename ($kb_rename)"
-	local copy="Copy"
+	local copy="Copy entry"
 	local delete="Delete ($kb_delete)"
 	local edit="Edit ($kb_edit)"
-	local generate="Generate ($kb_generate)"
+	local generate="Generate new password ($kb_generate)"
+	# REVIEW: does this functionality really need keybinding?
+	local gen_qr="Generate QRCode ($kb_qrcode)"
+	local browse="Browse URL ($kb_browse_url)"
 
 	actions=("$show" "$type_menu" "$copy_menu" "$rename" "$copy" "$delete" "$edit"
-					 "$generate" "$BACK_OPTION")
+					 "$generate")
 
 	args=(
 		-kb-custom-1 "$kb_show"
@@ -206,10 +209,20 @@ entry_menu () {
 		-kb-custom-5 "$kb_delete"
 		-kb-custom-6 "$kb_edit"
 		-kb-custom-7 "$kb_generate"
-		# TODO:
-		# -kb-custom-16 "$kb_browse_url"
-		# -kb-custom-17 "$kb_qrcode"
 	)
+
+	if pass "$passentry" | grep "${URL_FIELD}: "; then
+		actions+=("$browse" )
+		args+=(-kb-custom-8 "$kb_browse_url")
+	fi
+
+	if command -v qrencode; then
+		actions+=("$gen_qr")
+		args+=(-kb-custom-9 "$kb_qrcode")
+	fi
+
+	# need to add back button the last
+	actions+=("$BACK_OPTION")
 
 	local placeholder
 	placeholder=$(wrap_placeholder "Choose action (displayed hotkeys also work from main menu)")
@@ -223,7 +236,6 @@ entry_menu () {
 
 	# pressed keybinding is more important than selected entry
 	[ "$rofi_exit" -ne 0 ] && action="$rofi_exit"
-	echo
 
 	case $action in
 		10 | "$show") show_entry ;;
@@ -234,6 +246,8 @@ entry_menu () {
 		14 | "$delete") delete_entry "$passentry" ;;
 		15 | "$edit") edit_entry "$passentry" ;;
 		16 | "$generate") generate_pass "$passentry" ;;
+		17 | "$browse") browse_url "$passentry" ;;
+		18 | "$gen_qr") generate_qr "$passentry" ;;
 		"$BACK_OPTION") main_menu ;;
 		*) exit ;;
 	esac
@@ -493,13 +507,11 @@ browse_url () {
 	$BROWSER "$url"
 }
 
-generate_qr_code() {
+generate_qr() {
 	local passentry="$1"
 	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
 
-	has_qrencode() { command -v qrencode >/dev/null 2>&1; }
-
-	if ! has_qrencode; then
+	if ! command -v qrencode; then
 		printf '%s\n' "qrencode not found" | _rofi
 		assert_status $?
 		main_menu
