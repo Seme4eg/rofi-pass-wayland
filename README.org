@@ -1,4 +1,7 @@
 #+title: rofi-pass-wayland
+#+author: earthian
+#+email: 418@duck.com
+#+startup: content indent
 
 A [[https://github.com/lbonn/rofi][rofi-wayland]] frontend for [[http://www.passwordstore.org/][ZX2C4 pass project]]. The original repo is not very
 actively maintained to i decided to give it a go.
