@@ -385,11 +385,15 @@ remove_entry() {
 	case $ask in
 		"yes")
 			notify_w "Deleting $1 ..."
+			# need subshell in case some people have post-commit hook setup in pass
+			# to not wait for it to finish
+			(
 			if pass rm --force "$1"; then
 				notify_w "Successfully deleted $1"
 			else
 				notify_w "Failed to delete $1"
 			fi
+			) &
 			;;
 		*) main_menu ;;
 	esac
