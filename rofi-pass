@@ -65,8 +65,8 @@ kb_insert="Alt+i"
 kb_show="Alt+o"
 
 # Actions
-kb_rename="Alt+r"
-kb_delete="Alt+x"
+kb_move="Alt+m"
+kb_remove="Alt+x"
 kb_edit="Alt+e"
 kb_generate="Alt+I"
 
@@ -81,7 +81,6 @@ _rofi () { rofi -no-auto-select -i -dmenu "$@"; }
 
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
-# REVIEW: not sure about --clip flag
 _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 
 
@@ -107,8 +106,8 @@ main_menu () {
 		-kb-custom-10 "$kb_insert"
 		-kb-custom-11 "$kb_show"
 
-		-kb-custom-12 "$kb_rename"
-		-kb-custom-13 "$kb_delete"
+		-kb-custom-12 "$kb_move"
+		-kb-custom-13 "$kb_remove"
 		-kb-custom-14 "$kb_edit"
 		-kb-custom-15 "$kb_generate"
 
@@ -169,8 +168,8 @@ main_menu () {
 		19) insert_entry ;;
 		20) show_entry ;;
 
-		21) rename_entry "$passentry" ;;
-		22) delete_entry "$passentry" ;;
+		21) move_entry "$passentry" ;;
+		22) remove_entry "$passentry" ;;
 		23) edit_entry "$passentry" ;;
 		24) generate_pass "$passentry" ;;
 
@@ -189,9 +188,9 @@ entry_menu () {
 	local show="Show ($kb_show)"
 	local type_menu="Type field / autotype ($kb_type_field)"
 	local copy_menu="Copy field ($kb_copy_field)"
-	local rename="Rename ($kb_rename)"
+	local rename="Rename ($kb_move)"
 	local copy="Copy entry"
-	local delete="Delete ($kb_delete)"
+	local delete="Delete ($kb_remove)"
 	local edit="Edit ($kb_edit)"
 	local generate="Generate new password ($kb_generate)"
 	# REVIEW: does this functionality really need keybinding?
@@ -205,8 +204,8 @@ entry_menu () {
 		-kb-custom-1 "$kb_show"
 		-kb-custom-2 "$kb_type_field"
 		-kb-custom-3 "$kb_copy_field"
-		-kb-custom-4 "$kb_rename"
-		-kb-custom-5 "$kb_delete"
+		-kb-custom-4 "$kb_move"
+		-kb-custom-5 "$kb_remove"
 		-kb-custom-6 "$kb_edit"
 		-kb-custom-7 "$kb_generate"
 	)
@@ -232,7 +231,6 @@ entry_menu () {
 	action=$(printf '%s\n' "${actions[@]}" | _rofi "${args[@]}")
 
 	rofi_exit=$?
-	echo $rofi_exit
 
 	# pressed keybinding is more important than selected entry
 	[ "$rofi_exit" -ne 0 ] && action="$rofi_exit"
@@ -241,9 +239,9 @@ entry_menu () {
 		10 | "$show") show_entry ;;
 		11 | "$type_menu") _type "$passentry" menu ;;
 		12 | "$copy_menu") _copy menu ;;
-		13 | "$rename") rename_entry "$passentry" ;;
+		13 | "$rename") move_entry "$passentry" ;;
 		"$copy") copy_entry "$passentry" ;;
-		14 | "$delete") delete_entry "$passentry" ;;
+		14 | "$delete") remove_entry "$passentry" ;;
 		15 | "$edit") edit_entry "$passentry" ;;
 		16 | "$generate") generate_pass "$passentry" ;;
 		17 | "$browse") browse_url "$passentry" ;;
@@ -350,16 +348,16 @@ _copy() {
 	esac
 }
 
-rename_entry() {
+move_entry() {
 	placeholder=$(wrap_placeholder "New path for $1")
 	path=$(passls | _rofi -theme-str "$placeholder")
 	assert_status $?
 
 	notify_w "Moving $1 to $path ..."
 	if pass mv "$1" "$path"; then
-		notify_w "Successfully renamed $1 to $path"
+		notify_w "Successfully moved $1 to $path"
 	else
-		notify_w "Failed to rename $1 to $path"
+		notify_w "Failed to move $1 to $path"
 	fi
 }
 
@@ -377,7 +375,7 @@ copy_entry() {
 	fi
 }
 
-delete_entry() {
+remove_entry() {
 	local ask_content=("yes" "no")
 	local placeholder
 	placeholder=$(wrap_placeholder "Delete $1?")
@@ -408,18 +406,25 @@ edit_entry() {
 
 generate_pass () {
 	local passentry="$1"
+	# pass anything as 2nd arg to suppress all notifications of this func
+	local silent="$2"
 
 	placeholder=$(wrap_placeholder "Password length (leave empty for pass default):")
 	length=$(printf '%s' "" | _rofi -theme-str "$placeholder")
-	assert_status $?
+	# don't 'exit' in this function since there are some cleanups than need to be
+	# done if this function fails
+	[ "$?" -eq 1 ] && return 1
 
-	notify_w "Generating and saving new passwrod for $passentry"
+	[ -z "$silent" ] && notify_w "Generating passwrod for $passentry ..."
 
 	if _generate_pass "$passentry" "$length"; then
-		notify_w "Successfully generated new password for $passentry"
+		[ -z "$silent" ] && notify_w "Successfully generated password for $passentry"
 	else
-		notify_w "Failed to generate nwe password for $passentry"
+		[ -z "$silent" ] && notify_w "Failed to generate password for $passentry"
+		return 1
 	fi
+
+	return 0
 }
 
 show_entry () {
@@ -443,22 +448,20 @@ show_entry () {
 }
 
 insert_entry () {
-	url=$(wl-paste)
+	clipboard=$(wl-paste)
+	# -format 'f' to count only user input and not what he pressed 'enter' on
+	local rofi_args=(-format 'f' -theme-str "$placeholder" -p "> ")
 
-	if [[ "${url:0:4}" == "http" ]]; then
-		domain_name="$(printf '%s\n' "${url}" | awk -F / '{l=split($3,a,"."); \
-			print (a[l-1]=="com"?a[l-2] OFS:X) a[l-1] OFS a[l]}' OFS=".")"
-		help_content="Url: ${domain_name}"
-	else
+	if ! is_valid_url "$clipboard"; then
 		help_content="Hint: Copy URL to clipboard before calling this menu."
+		rofi_args+=(-mesg "${help_content}")
 	fi
 
 	# needs to be checked here since this f-n may be called directly from 'main'
 	cd "$PASSWORD_STORE_DIR" || exit
 
 	placeholder=$(wrap_placeholder "Enter name, must be unique ...")
-	path=$(passls | _rofi -format 'f' -filter "${domain_name}" \
-		-theme-str "$placeholder" -mesg "${help_content}" -p "> ")
+	path=$(passls | _rofi "${rofi_args[@]}")
 	assert_status $?
 
 	if [ -z "$path" ]; then
@@ -466,7 +469,6 @@ insert_entry () {
 		insert_entry
 		exit
 	fi
-
 
 	local _user="$default_user"
 	[[ "$_user" == ":basename" ]] && _user="$(basename "$path")"
@@ -482,13 +484,27 @@ insert_entry () {
 	assert_status $?
 
 	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}")
-	[[ $url == http* ]] && pass_content+=("${URL_FIELD}: ${url}")
+
+	if is_valid_url "$clipboard"; then
+		placeholder=$(wrap_placeholder "Edit the url from clipboard (Control+Space to edit)")
+		url=$(printf '%s' "$clipboard" | _rofi -format 'f' -theme-str "$placeholder")
+		assert_status $?
+		[ -z "$url" ] && url="$clipboard"
+		pass_content+=("${URL_FIELD}: ${url}")
+	fi
 
 	notify_w "Creating password entry $path ..."
-	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" > /dev/null
+	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" > /dev/null &
 
 	if [ $? == 0 ]; then
-		[[ $pw == "Generate" ]] && _generate_pass "$path"
+		if [[ $pw == "Generate" ]]; then
+			if ! generate_pass "$path" silent; then
+				# remove created entry on failure in generating
+				pass rm --force "$path" &
+				notify_w "Interrupted, no password entry was created"
+				exit
+			fi
+		fi
 		[[ $edit_new_pass == "true" ]] && pass edit "${path}"
 		notify_w "Password entry $path successfully inserted"
 	else
@@ -548,8 +564,8 @@ help_menu () {
 	${kb_insert}: Insert new entry
 	${kb_show}: Show entry
 	---
-	${kb_rename}: Rename entry
-	${kb_delete}: Delete entry
+	${kb_move}: Rename entry
+	${kb_remove}: Delete entry
 	${kb_edit}: Edit entry
 	${kb_generate}: Generate entry
 	---
@@ -624,6 +640,12 @@ populate_fields_map() {
 		fi
 	fi
 
+}
+
+is_valid_url() {
+	# Regular expression pattern to match a valid URL
+	url_regex="^http[s]?|ftp):\/\/.*$"
+	[[ $1 =~ $url_regex ]]
 }
 
 # get all password files and output as newline-delimited text
@@ -722,3 +744,5 @@ main () {
 }
 
 main "$@"
+
+exit
