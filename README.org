@@ -36,12 +36,13 @@ this script to see all available flags.
 - [[https://fukuchi.org/works/qrencode/][qrencode]] (optional: for generating and displaying pass qrcode)
 - [[https://github.com/tadfisher/pass-otp][pass-otp]] (optional: for OTPs)
 
-** Configuration
-Presedence:
-- ~ROFI_PASS_CONFIG~ env var. You can set the environment variable like this:
-  ~ROFI_PASS_CONFIG="/path/to/config" rofi-pass~
+** Installation
+Install from [[https://aur.archlinux.org/packages/rofi-pass-wayland-git][AUR (rofi-pass-wayland-git)]] or copy =rofi-pass= script to dir in your
+~$PATH~. Script has all needed defaults, but if you want to customise further you
+can pass your config to the script with one of the following ways:
+
 - =$HOME/.config/rofi-pass/config=
-- internal default values
+- ~ROFI_PASS_CONFIG="/path/to/config"~ env var.
 
 See example configuration in [[config.example]] file.
 
@@ -87,7 +88,7 @@ it will prompt for the secret key password using ~pinentry~. If ~pinentry~ is
 configured to read from a ~tty~ then ~rofi-pass~ will hang indefinitely. To fix this
 you need to [[https://wiki.archlinux.org/title/GnuPG#pinentry][configure gpg]] to use a gui version of ~pinentry~. Afterwards you may
 have to kill the GPG agent if it's still in a bad state: ~killall -9 gpg-agent~.
-** Todos [0/2]
+** Todos [0/1]
 *** TODO pass grep urls
 Instead of previous bookmarks functionality utilize 'pass grep $url_field' to
 grep and output all urls of the password store
