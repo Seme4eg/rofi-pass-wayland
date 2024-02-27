@@ -161,9 +161,9 @@ main_menu () {
 		14) _type "$passentry" OTP ;;
 		15) _type "$passentry" "$AUTOTYPE_FIELD" ;;
 
-		16) _copy menu ;;
-		17) _copy pass ;;
-		18) _copy $USERNAME_FIELD ;;
+		16) _copy menu "$passentry" ;;
+		17) _copy pass "$passentry" ;;
+		18) _copy $USERNAME_FIELD "$passentry" ;;
 
 		19) insert_entry ;;
 		20) show_entry ;;
@@ -339,7 +339,7 @@ _copy() {
 
 			_copy "$field"
 		  ;;
-		"pass")
+		pass)
 			pass -c "$passentry"
 			notify_w "Copied $field field\n_clearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
 			;;
