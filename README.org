@@ -9,7 +9,7 @@ actively maintained to i decided to give it a go.
 Main goal - provide needed frontend features for pass and sane codebase while
 still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
 
-[[assets/demo.gif]]
+[[./assets/demo.gif]]
 
 Password entry submenu:
 
@@ -23,7 +23,7 @@ _Features_:
 - Open URLs of entries with hotkey
 - Generate and display QR code directly in rofi ([[https://fukuchi.org/works/qrencode/][qrencode]] needed).
 - Generate and autotype in OTPs
-- Extensive configuration (see [[config.example]])
+- Extensive configuration (see [[./config.example]])
 
 Use default binding ~Alt+h~ to see available bindings. And pass ~--help | -h~ flag to
 this script to see all available flags.
@@ -88,6 +88,16 @@ it will prompt for the secret key password using ~pinentry~. If ~pinentry~ is
 configured to read from a ~tty~ then ~rofi-pass~ will hang indefinitely. To fix this
 you need to [[https://wiki.archlinux.org/title/GnuPG#pinentry][configure gpg]] to use a gui version of ~pinentry~. Afterwards you may
 have to kill the GPG agent if it's still in a bad state: ~killall -9 gpg-agent~.
+
+*** rofi menu unexpectedly exits upon performing some action
+If you have 'notify' option set to ~false~ in config (it's a default) you might
+sometimes just not see some 'Failure' messages and just see the script silently
+exiting after you tried some action.
+
+The script isn't aiming to cover and display all even most obvious *user* errors,
+like not initialized password store in given directory or just non-existant dir.
+Try running this script form console directly and see displayed errors.
+
 ** Todos [0/1]
 *** TODO pass grep urls
 Instead of previous bookmarks functionality utilize 'pass grep $url_field' to
