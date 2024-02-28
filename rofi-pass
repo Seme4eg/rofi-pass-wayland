@@ -419,9 +419,19 @@ generate_pass () {
 	# done if this function fails
 	[ "$?" -eq 1 ] && return 1
 
+	placeholder=$(wrap_placeholder "Use symbols?")
+	yesno=("yes" "no")
+	usesymbols=$(printf '%s\n' "${yesno[@]}" | _rofi -theme-str "$placeholder")
+	[ "$?" -eq 1 ] && return 1
+
+	# compose args for generate command
+	local -a args
+	[ "$usesymbols" == "no" ] && args+=("-n")
+	args+=("$passentry" "$length")
+
 	[ -z "$silent" ] && notify_w "Generating passwrod for $passentry ..."
 
-	if _generate_pass "$passentry" "$length"; then
+	if _generate_pass "${args[@]}"; then
 		[ -z "$silent" ] && notify_w "Successfully generated password for $passentry"
 	else
 		[ -z "$silent" ] && notify_w "Failed to generate password for $passentry"
