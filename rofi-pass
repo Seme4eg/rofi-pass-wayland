@@ -73,22 +73,21 @@ kb_generate="Alt+I"
 kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
 kb_previous_root="Alt+bracketleft" # [
-kb_next_root="Alt+bracketright" # ]
+kb_next_root="Alt+bracketright"    # ]
 
 # --- Customisable functions ---
 
-_rofi () { rofi -no-auto-select -i -dmenu "$@"; }
+_rofi() { rofi -no-auto-select -i -dmenu "$@"; }
 
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
-_generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
-
+_generate_pass() { pass generate --clip --in-place "$@" >/dev/null; }
 
 ###############################################################################
 #                               Action functions                              #
 ###############################################################################
 
-main_menu () {
+main_menu() {
 	args=(
 		# Same sequence as in above config section !
 		-kb-custom-1 "$help"
@@ -119,7 +118,7 @@ main_menu () {
 	)
 
 	local placeholder
-	placeholder=$(wrap_placeholder  "Current store: $PASSWORD_STORE_DIR")
+	placeholder=$(wrap_placeholder "Current store: $PASSWORD_STORE_DIR")
 	args+=(-theme-str "$placeholder")
 
 	local passentry
@@ -131,17 +130,20 @@ main_menu () {
 	# The exit code for -kb-custom-X is X+9.
 	case $rofi_exit in
 		1) exit ;;
-		10) help_menu; return;;
+		10)
+			help_menu
+			return
+			;;
 		27) # next root
 			roots_length=${#roots[@]}
-			root_index=$(( (root_index-1+roots_length) % roots_length))
+			root_index=$(((root_index - 1 + roots_length) % roots_length))
 			PASSWORD_STORE_DIR=${roots[$root_index]}
 			main_menu
 			return
 			;;
 		28) # previous root
 			roots_length=${#roots[@]}
-			root_index=$(( (root_index+1) % roots_length))
+			root_index=$(((root_index + 1) % roots_length))
 			PASSWORD_STORE_DIR=${roots[$root_index]}
 			main_menu
 			return
@@ -178,11 +180,12 @@ main_menu () {
 		*)
 			unset fields_map
 			exit
+			;;
 	esac
 
 }
 
-entry_menu () {
+entry_menu() {
 	local passentry="$1"
 
 	local show="Show ($kb_show)"
@@ -198,7 +201,7 @@ entry_menu () {
 	local browse="Browse URL ($kb_browse_url)"
 
 	actions=("$show" "$type_menu" "$copy_menu" "$rename" "$copy" "$delete" "$edit"
-					 "$generate")
+		"$generate")
 
 	args=(
 		-kb-custom-1 "$kb_show"
@@ -211,7 +214,7 @@ entry_menu () {
 	)
 
 	if pass "$passentry" | grep "${URL_FIELD}: "; then
-		actions+=("$browse" )
+		actions+=("$browse")
 		args+=(-kb-custom-8 "$kb_browse_url")
 	fi
 
@@ -251,7 +254,7 @@ entry_menu () {
 	esac
 }
 
-generate_otp () {
+generate_otp() {
 	local passentry="$1"
 
 	# First, we check if there is a non-conventional OTP command in the pass file
@@ -273,12 +276,15 @@ _type() (
 	local passentry="$1"
 	local field="$2"
 
-  [[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
-    fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
+	[[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
+		fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
 
-	do_type() { sleep $wait; wtype -d ${type_delay} - ; }
+	do_type() {
+		sleep $wait
+		wtype -d ${type_delay} -
+	}
 
-	autotype () {
+	autotype() {
 		do_press_key() { wtype -k "$1"; }
 
 		for word in ${fields_map["$AUTOTYPE_FIELD"]}; do
@@ -309,7 +315,7 @@ _type() (
 
 			placeholder=$(wrap_placeholder "Field to autotype")
 			field=$(printf '%s\n' "${sorted_fields[@]}" |
-						    _rofi -theme-str "$placeholder")
+				_rofi -theme-str "$placeholder")
 			assert_status $?
 
 			_type "$passentry" "$field"
@@ -333,25 +339,26 @@ _copy() {
 			mapfile -t sorted_fields < <(get_sorted_fields)
 			placeholder=$(wrap_placeholder "Field to copy")
 			field=$(printf '%s\n' "${sorted_fields[@]}" | sort |
-							  _rofi -theme-str "$placeholder")
+				_rofi -theme-str "$placeholder")
 
 			assert_status $?
 
 			_copy "$field"
-		  ;;
+			;;
 		pass)
 			pass -c "$passentry"
 			notify_w "Copied $field field\n_clearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
 			;;
 		*) printf '%s' "${fields_map[$field]}" | wl-copy &&
-				 notify_w "Copied $field field" ;;
+			notify_w "Copied $field field" ;;
 	esac
 }
 
 move_entry() {
 	placeholder=$(wrap_placeholder "New path for $1")
-	path=$(passls | _rofi -theme-str "$placeholder")
+	path=$(passls | _rofi -format 'f' -theme-str "$placeholder")
 	assert_status $?
+	echo "PASSWORD_STORE_DIR=${roots[$root_index]} pass mv -f $1 $path"
 
 	notify_w "Moving $1 to $path ..."
 	if pass mv "$1" "$path"; then
@@ -388,11 +395,11 @@ remove_entry() {
 			# need subshell in case some people have post-commit hook setup in pass
 			# to not wait for it to finish
 			(
-			if pass rm --force "$1"; then
-				notify_w "Successfully deleted $1"
-			else
-				notify_w "Failed to delete $1"
-			fi
+				if pass rm --force "$1"; then
+					notify_w "Successfully deleted $1"
+				else
+					notify_w "Failed to delete $1"
+				fi
 			) &
 			;;
 		*) main_menu ;;
@@ -408,7 +415,7 @@ edit_entry() {
 	fi
 }
 
-generate_pass () {
+generate_pass() {
 	local passentry="$1"
 	# pass anything as 2nd arg to suppress all notifications of this func
 	local silent="$2"
@@ -441,12 +448,12 @@ generate_pass () {
 	return 0
 }
 
-show_entry () {
+show_entry() {
 	local content
 	local -a lines
 	for key in "${!fields_map[@]}"; do lines+=("${key}: ${fields_map[$key]}"); done
 
-	content=("$(printf '%s\n' "${lines[@]}")" "$BACK_OPTION" )
+	content=("$(printf '%s\n' "${lines[@]}")" "$BACK_OPTION")
 	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
 	selection=$(printf '%s\n' "${content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
 	assert_status $?
@@ -461,7 +468,7 @@ show_entry () {
 	exit
 }
 
-insert_entry () {
+insert_entry() {
 	clipboard=$(wl-paste)
 	# -format 'f' to count only user input and not what he pressed 'enter' on
 	local rofi_args=(-format 'f' -theme-str "$placeholder" -p "> ")
@@ -508,7 +515,7 @@ insert_entry () {
 	fi
 
 	notify_w "Creating password entry $path ..."
-	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" > /dev/null &
+	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" >/dev/null &
 
 	if [ $? == 0 ]; then
 		if [[ $pw == "Generate" ]]; then
@@ -527,7 +534,7 @@ insert_entry () {
 }
 
 # TODO: deprecate (including keybinding) in favor of upcoming 'pass urls' menu
-browse_url () {
+browse_url() {
 	local passentry="$1"
 	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
 	if [ -z "$url" ]; then
@@ -561,39 +568,38 @@ window{
 	rm -f "$qrcode_path"
 }
 
-help_menu () {
+help_menu() {
 	local placeholder
 	placeholder=$(wrap_placeholder "Hint: All hotkeys are configurable in config file")
-	_rofi -theme-str "$placeholder" -mesg "Press Return to exit this menu" <<- EOM
-	${kb_type_field}: Type field / autotype
-	${kb_type_pass}: Type password
-	${kb_type_user}: Type username
-	${kb_type_otp}: Type OTP
-	${kb_autotype}: Autotype based on '$AUTOTYPE_FIELD' field contents (defaults to '$default_autotype')
-	---
-	${kb_copy_field}: Copy field ..
-	${kb_copy_pass}: Copy password
-	${kb_copy_user}: Copy username
-	---
-	${kb_insert}: Insert new entry
-	${kb_show}: Show entry
-	---
-	${kb_move}: Rename entry
-	${kb_remove}: Delete entry
-	${kb_edit}: Edit entry
-	${kb_generate}: Generate entry
-	---
-	${kb_browse_url}: Browse URL
-	${kb_qrcode}: Generate and display qrcode
-	${kb_previous_root}: Switch to previous password store root
-	${kb_next_root}: Switch to next password store root
-EOM
+	_rofi -theme-str "$placeholder" -mesg "Press Return to exit this menu" <<-EOM
+		${kb_type_field}: Type field / autotype
+		${kb_type_pass}: Type password
+		${kb_type_user}: Type username
+		${kb_type_otp}: Type OTP
+		${kb_autotype}: Autotype based on '$AUTOTYPE_FIELD' field contents (defaults to '$default_autotype')
+		---
+		${kb_copy_field}: Copy field ..
+		${kb_copy_pass}: Copy password
+		${kb_copy_user}: Copy username
+		---
+		${kb_insert}: Insert new entry
+		${kb_show}: Show entry
+		---
+		${kb_move}: Rename entry
+		${kb_remove}: Delete entry
+		${kb_edit}: Edit entry
+		${kb_generate}: Generate entry
+		---
+		${kb_browse_url}: Browse URL
+		${kb_qrcode}: Generate and display qrcode
+		${kb_previous_root}: Switch to previous password store root
+		${kb_next_root}: Switch to next password store root
+	EOM
 
 	assert_status $?
 
 	main_menu
 }
-
 
 ###############################################################################
 #                               Helper functions                              #
@@ -614,7 +620,7 @@ populate_fields_map() {
 	# check if user propmt exists in the store
 	output=$(pass show "$passentry" 2>&1)
 	[ "$?" -eq 1 ] && notify_w "$output" && exit
-	
+
 	# get an array of password file fields like url: user: and custom ones
 	local -a password_temp
 	mapfile -t password_temp < <(pass show "$passentry")
@@ -625,7 +631,7 @@ populate_fields_map() {
 	# if the line contains the string otpauth://. If either condition is true,
 	# the action block associated with this condition is executed
 	fields=$(printf '%s\n' "${password_temp[@]:1}" |
-				     awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
+		awk '$1 ~ /:$/ || /otpauth:\/\// {$1=$1;print}')
 	unset password_temp
 
 	if [[ -n $fields ]]; then
@@ -680,12 +686,12 @@ wrap_placeholder() { echo "#entry { placeholder: \"$1\"; }"; }
 get_sorted_fields() {
 	local -a keys=("${!fields_map[@]}")
 	# remove autotype field from keys array
-	keys=("${keys[@]/$AUTOTYPE_FIELD}")
+	keys=("${keys[@]/$AUTOTYPE_FIELD/}")
 	# grep out empty strings cuz command above doesn't update indecies
 	printf '%s\n' "${keys[@]}" | sort | grep -v "^$"
 }
 
-help_msg () {
+help_msg() {
 	cat <<'EOF'
 	Usage:
 	rofi-pass [command]
@@ -696,13 +702,12 @@ help_msg () {
 EOF
 }
 
-
 ###############################################################################
 #                             Main function logic                             #
 ###############################################################################
 
 # sources the first config file with a valid path
-load_config () {
+load_config() {
 	local config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 	local -a configs=(
 		"$ROFI_PASS_CONFIG"
@@ -719,14 +724,14 @@ load_config () {
 	done
 }
 
-populate_roots () {
+populate_roots() {
 	local IFS=:
 
 	# Precedense: flag -> config -> pass DIR var -> default $HOME/.password-store
 	if [[ "$1" == "--root" && -n "$2" ]]; then
-		read -r -a roots <<< "$2"
+		read -r -a roots <<<"$2"
 	elif [[ -n "$ROOTS" ]]; then # config var
-    read -r -a roots <<< "$ROOTS"
+		read -r -a roots <<<"$ROOTS"
 	elif [[ -n $PASSWORD_STORE_DIR ]]; then
 		roots=("$PASSWORD_STORE_DIR")
 	else
@@ -736,7 +741,7 @@ populate_roots () {
 	fi
 }
 
-main () {
+main() {
 	load_config
 
 	# check for BROWSER variable, use xdg-open as fallback

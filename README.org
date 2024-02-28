@@ -6,8 +6,8 @@
 A [[https://github.com/lbonn/rofi][rofi-wayland]] frontend for [[http://www.passwordstore.org/][ZX2C4 pass project]]. The original repo is not very
 actively maintained to i decided to give it a go.
 
-Main goal - provide needed frontend features for pass and sane codebase while
-still keeping it just a bash script that you can just use on its own. Good old copy-paste-use.
+Main goal - provide frontend for pass, while keeping it a small, readable
+single-file script.
 
 [[./assets/demo.gif]]
 
@@ -24,6 +24,7 @@ _Features_:
 - Generate and display QR code directly in rofi ([[https://fukuchi.org/works/qrencode/][qrencode]] needed).
 - Generate and autotype in OTPs
 - Extensive configuration (see [[./config.example]])
+- Clean codebase, linted with [[https://github.com/koalaman/shellcheck][shellcheck]] and formatted with [[https://github.com/mvdan/sh][shfmt]]
 
 Use default binding ~Alt+h~ to see available bindings. And pass ~--help | -h~ flag to
 this script to see all available flags.
