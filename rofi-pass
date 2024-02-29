@@ -24,7 +24,6 @@
 URL_FIELD='url'
 USERNAME_FIELD='user'
 AUTOTYPE_FIELD='autotype'
-OTPMETHOD_FIELD='otp_method'
 
 BACK_OPTION='← back'
 
@@ -82,6 +81,8 @@ _rofi() { rofi -no-auto-select -i -dmenu "$@"; }
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
 _generate_pass() { pass generate --clip --in-place "$@" >/dev/null; }
+
+_generate_otp() { pass otp "$@"; }
 
 ###############################################################################
 #                               Action functions                              #
@@ -254,23 +255,6 @@ entry_menu() {
 	esac
 }
 
-generate_otp() {
-	local passentry="$1"
-
-	# First, we check if there is a non-conventional OTP command in the pass file
-	_check_otp_cmd() {
-		pass "$passentry" | grep -q "${OTPMETHOD_FIELD}: "
-	}
-
-	if _check_otp_cmd; then
-		# We execute the commands after otp_method: AS-IS
-		bash -c "$(_check_otp_cmd)"
-	else
-		# If there is no method defined, fallback to pass-otp
-		pass otp "$passentry"
-	fi
-}
-
 # Use func() () so the inner vars & funcs remain within this subshell
 _type() (
 	local passentry="$1"
@@ -293,7 +277,7 @@ _type() (
 				":space") do_press_key space ;;
 				":delay") sleep "${delay}" ;;
 				":enter") do_press_key Return ;;
-				":otp") printf '%s' "$(generate_otp "$passentry")" | do_type ;;
+				":otp") printf '%s' "$(_generate_otp "$passentry")" | do_type ;;
 				"pass") printf '%s' "${fields_map[pass]}" | do_type ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
@@ -322,7 +306,7 @@ _type() (
 			;;
 		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | do_type ;;
 		pass) printf '%s' "${fields_map[pass]}" | do_type ;;
-		"OTP") printf '%s' "$(generate_otp "$passentry")" | do_type ;;
+		"OTP") printf '%s' "$(_generate_otp "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autotype ;;
 		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
@@ -635,16 +619,16 @@ populate_fields_map() {
 	unset password_temp
 
 	if [[ -n $fields ]]; then
-		while read -r LINE; do
+		while read -r line; do
 			unset _id _val
-			case "$LINE" in
-				"otpauth://"* | "${OTPMETHOD_FIELD}"*)
+			case "$line" in
+				"otpauth://"*)
 					_id="OTP"
-					_val=""
+					_val="configured"
 					;;
 				*)
-					_id="${LINE%%: *}"
-					_val="${LINE#* }"
+					_id="${line%%: *}"
+					_val="${line#* }"
 					;;
 			esac
 
