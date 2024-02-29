@@ -59,9 +59,10 @@ kb_autotype="Alt+A"
 kb_copy_field="Alt+c"
 kb_copy_pass="Alt+p"
 kb_copy_user="Alt+n"
+kb_copy_otp="Alt+o"
 
 kb_insert="Alt+i"
-kb_show="Alt+o"
+kb_show="Alt+Return"
 
 # Actions
 kb_move="Alt+m"
@@ -71,8 +72,7 @@ kb_generate="Alt+I"
 
 kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
-kb_previous_root="Alt+bracketleft" # [
-kb_next_root="Alt+bracketright"    # ]
+kb_switch_root="Alt+bracketright" # ]
 
 # --- Customisable functions ---
 
@@ -82,7 +82,7 @@ _notify() { notify-send -e "rofi-pass" "$1"; }
 
 _generate_pass() { pass generate --clip --in-place "$@" >/dev/null; }
 
-_generate_otp() { pass otp "$@"; }
+_get_otp() { pass otp "$@"; }
 
 ###############################################################################
 #                               Action functions                              #
@@ -102,19 +102,19 @@ main_menu() {
 		-kb-custom-7 "$kb_copy_field"
 		-kb-custom-8 "$kb_copy_pass"
 		-kb-custom-9 "$kb_copy_user"
+		-kb-custom-10 "$kb_copy_otp"
 
-		-kb-custom-10 "$kb_insert"
-		-kb-custom-11 "$kb_show"
+		-kb-custom-11 "$kb_insert"
+		-kb-custom-12 "$kb_show"
 
-		-kb-custom-12 "$kb_move"
-		-kb-custom-13 "$kb_remove"
-		-kb-custom-14 "$kb_edit"
-		-kb-custom-15 "$kb_generate"
+		-kb-custom-13 "$kb_move"
+		-kb-custom-14 "$kb_remove"
+		-kb-custom-15 "$kb_edit"
+		-kb-custom-16 "$kb_generate"
 
-		-kb-custom-16 "$kb_browse_url"
-		-kb-custom-17 "$kb_qrcode"
-		-kb-custom-18 "$kb_previous_root"
-		-kb-custom-19 "$kb_next_root"
+		-kb-custom-17 "$kb_browse_url"
+		-kb-custom-18 "$kb_qrcode"
+		-kb-custom-19 "$kb_switch_root"
 		# 19 custom keybinds is max, custom statuses form rofi can be from 10 to 28
 	)
 
@@ -135,16 +135,9 @@ main_menu() {
 			help_menu
 			return
 			;;
-		27) # next root
+		28) # next root
 			roots_length=${#roots[@]}
 			root_index=$(((root_index - 1 + roots_length) % roots_length))
-			PASSWORD_STORE_DIR=${roots[$root_index]}
-			main_menu
-			return
-			;;
-		28) # previous root
-			roots_length=${#roots[@]}
-			root_index=$(((root_index + 1) % roots_length))
 			PASSWORD_STORE_DIR=${roots[$root_index]}
 			main_menu
 			return
@@ -167,17 +160,18 @@ main_menu() {
 		16) _copy menu "$passentry" ;;
 		17) _copy pass "$passentry" ;;
 		18) _copy $USERNAME_FIELD "$passentry" ;;
+		19) _copy OTP "$passentry" ;;
 
-		19) insert_entry ;;
-		20) show_entry ;;
+		20) insert_entry ;;
+		21) show_entry ;;
 
-		21) move_entry "$passentry" ;;
-		22) remove_entry "$passentry" ;;
-		23) edit_entry "$passentry" ;;
-		24) generate_pass "$passentry" ;;
+		22) move_entry "$passentry" ;;
+		23) remove_entry "$passentry" ;;
+		24) edit_entry "$passentry" ;;
+		25) generate_pass "$passentry" ;;
 
-		25) browse_url "$passentry" ;;
-		26) generate_qr "$passentry" ;;
+		26) browse_url "$passentry" ;;
+		27) generate_qr "$passentry" ;;
 		*)
 			unset fields_map
 			exit
@@ -256,7 +250,7 @@ entry_menu() {
 }
 
 # Use func() () so the inner vars & funcs remain within this subshell
-_type() (
+_type() {
 	local passentry="$1"
 	local field="$2"
 
@@ -277,7 +271,7 @@ _type() (
 				":space") do_press_key space ;;
 				":delay") sleep "${delay}" ;;
 				":enter") do_press_key Return ;;
-				":otp") printf '%s' "$(_generate_otp "$passentry")" | do_type ;;
+				":otp") printf '%s' "$(_get_otp "$passentry")" | do_type ;;
 				"pass") printf '%s' "${fields_map[pass]}" | do_type ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
@@ -306,11 +300,11 @@ _type() (
 			;;
 		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | do_type ;;
 		pass) printf '%s' "${fields_map[pass]}" | do_type ;;
-		"OTP") printf '%s' "$(_generate_otp "$passentry")" | do_type ;;
+		OTP) printf '%s' "$(_get_otp "$passentry")" | do_type ;;
 		"$AUTOTYPE_FIELD") autotype ;;
 		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
 	esac
-)
+}
 
 _copy() {
 	local field="$1"
@@ -333,6 +327,7 @@ _copy() {
 			pass -c "$passentry"
 			notify_w "Copied $field field\n_clearing in ${PASSWORD_STORE_CLIP_TIME:-45} seconds"
 			;;
+		OTP) _get_otp -c "$passentry" ;;
 		*) printf '%s' "${fields_map[$field]}" | wl-copy &&
 			notify_w "Copied $field field" ;;
 	esac
@@ -576,8 +571,7 @@ help_menu() {
 		---
 		${kb_browse_url}: Browse URL
 		${kb_qrcode}: Generate and display qrcode
-		${kb_previous_root}: Switch to previous password store root
-		${kb_next_root}: Switch to next password store root
+		${kb_switch_root}: Switch to previous password store root
 	EOM
 
 	assert_status $?
@@ -623,7 +617,7 @@ populate_fields_map() {
 			unset _id _val
 			case "$line" in
 				"otpauth://"*)
-					_id="OTP"
+					_id=OTP
 					_val="configured"
 					;;
 				*)

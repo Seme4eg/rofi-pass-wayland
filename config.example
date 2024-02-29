@@ -52,9 +52,10 @@ kb_autotype="Alt+A"
 kb_copy_field="Alt+c"
 kb_copy_pass="Alt+p"
 kb_copy_user="Alt+n"
+kb_copy_otp="Alt+o"
 
 kb_insert="Alt+i"
-kb_show="Alt+o"
+kb_show="Alt+Return"
 
 # Actions
 kb_move="Alt+m"
@@ -64,8 +65,7 @@ kb_generate="Alt+I"
 
 kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
-kb_previous_root="Alt+bracketleft" # [
-kb_next_root="Alt+bracketright" # ]
+kb_switch_root="Alt+bracketright" # ]
 
 # --- Customisable functions ---
 
@@ -75,4 +75,4 @@ _notify() { notify-send -e "rofi-pass" "$1"; }
 
 _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 
-_generate_otp() { pass otp "$@"; }
+_get_otp() { pass otp "$@"; }
