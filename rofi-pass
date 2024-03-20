@@ -292,8 +292,9 @@ _type() {
 			sorted_fields+=("${AUTOTYPE_FIELD}")
 
 			placeholder=$(wrap_placeholder "Field to autotype")
+			help_content="Global hotkeys: Pass ($kb_type_pass), User ($kb_type_user), OTP ($kb_type_otp), autotype ($kb_autotype)"
 			field=$(printf '%s\n' "${sorted_fields[@]}" |
-				_rofi -theme-str "$placeholder")
+				_rofi -theme-str "$placeholder" -mesg "$help_content")
 			assert_status $?
 
 			_type "$passentry" "$field"
@@ -316,8 +317,9 @@ _copy() {
 			local sorted_fields=()
 			mapfile -t sorted_fields < <(get_sorted_fields)
 			placeholder=$(wrap_placeholder "Field to copy")
+			help_content="Global hotkeys: Pass ($kb_copy_pass), User ($kb_copy_user), OTP ($kb_copy_otp)"
 			field=$(printf '%s\n' "${sorted_fields[@]}" | sort |
-				_rofi -theme-str "$placeholder")
+				_rofi -theme-str "$placeholder" -mesg "$help_content")
 
 			assert_status $?
 
