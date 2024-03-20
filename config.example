@@ -44,15 +44,15 @@ notify='false'
 help="Alt+h"
 
 kb_type_field="Alt+t"
-kb_type_pass="Alt+P"
-kb_type_user="Alt+N"
-kb_type_otp="Alt+O"
-kb_autotype="Alt+A"
+kb_type_pass="Alt+p"
+kb_type_user="Alt+n"
+kb_type_otp="Alt+o"
+kb_autotype="Alt+a"
 
-kb_copy_field="Alt+c"
-kb_copy_pass="Alt+p"
-kb_copy_user="Alt+n"
-kb_copy_otp="Alt+o"
+kb_copy_field="Alt+C"
+kb_copy_pass="Alt+P"
+kb_copy_user="Alt+N"
+kb_copy_otp="Alt+O"
 
 kb_insert="Alt+i"
 kb_show="Alt+Return"
