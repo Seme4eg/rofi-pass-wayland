@@ -99,7 +99,3 @@ The script isn't aiming to cover and display all even most obvious *user* errors
 like not initialized password store in given directory or just non-existant dir.
 Try running this script form console directly and see displayed errors.
 
-** Todos [0/1]
-*** TODO pass grep urls
-Instead of previous bookmarks functionality utilize 'pass grep $url_field' to
-grep and output all urls of the password store

@@ -514,7 +514,8 @@ insert_entry() {
 	fi
 }
 
-# TODO: deprecate (including keybinding) in favor of upcoming 'pass urls' menu
+# never used it, cuz i am first opening site and only then seek for password
+# dunno, maybe thing ain't needed at all
 browse_url() {
 	local passentry="$1"
 	url=$(pass "$passentry" | grep "${URL_FIELD}: " | cut -d' ' -f 2)
@@ -732,9 +733,6 @@ main() {
 	populate_roots "$@"
 	PASSWORD_STORE_DIR=${roots[$root_index]}
 
-	# TODO: see which flags make sence to be added here instead of deprecated
-	# 'default_do'
-	# menu, copy menu, type menu, show_entry, action_menu, open_url
 	case $1 in
 		--insert) insert_entry ;;
 		--help | -h) help_msg ;;
