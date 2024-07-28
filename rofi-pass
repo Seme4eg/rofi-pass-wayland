@@ -257,31 +257,31 @@ _type() {
 	[[ -z "${fields_map["${AUTOTYPE_FIELD}"]}" && -n $default_autotype ]] &&
 		fields_map["${AUTOTYPE_FIELD}"]="${default_autotype}"
 
-	do_type() {
-		sleep $wait
-		wtype -d ${type_delay} -
+	_wtype() {
+		sleep $wait              # delay before executing the typing sequence
+		wtype -d ${type_delay} - # delay before every key type
 	}
 
 	autotype() {
-		do_press_key() { wtype -k "$1"; }
+		wpress_key() { wtype -k "$1"; }
 
 		for word in ${fields_map["$AUTOTYPE_FIELD"]}; do
 			case "$word" in
-				":tab") do_press_key Tab ;;
-				":space") do_press_key space ;;
+				":tab") wpress_key Tab ;;
+				":space") wpress_key space ;;
 				":delay") sleep "${delay}" ;;
-				":enter") do_press_key Return ;;
-				":otp") printf '%s' "$(_get_otp "$passentry")" | do_type ;;
-				"pass") printf '%s' "${fields_map[pass]}" | do_type ;;
+				":enter") wpress_key Return ;;
+				":otp") printf '%s' "$(_get_otp "$passentry")" | _wtype ;;
+				"pass") printf '%s' "${fields_map[pass]}" | _wtype ;;
 				"path")
-					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | do_type
+					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | _wtype
 					;;
 				# Also handles non-existant fields prompt by just entering nothing
-				*) printf '%s' "${fields_map[${word}]}" | do_type ;;
+				*) printf '%s' "${fields_map[${word}]}" | _wtype ;;
 			esac
 		done
 
-		[[ ${auto_enter} == "true" ]] && do_press_key Return
+		[[ ${auto_enter} == "true" ]] && wpress_key Return
 	}
 
 	case "$field" in
@@ -299,11 +299,11 @@ _type() {
 
 			_type "$passentry" "$field"
 			;;
-		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | do_type ;;
-		pass) printf '%s' "${fields_map[pass]}" | do_type ;;
-		OTP) printf '%s' "$(_get_otp "$passentry")" | do_type ;;
+		"$USERNAME_FIELD") printf '%s' "${fields_map[${USERNAME_FIELD}]}" | _wtype ;;
+		pass) printf '%s' "${fields_map[pass]}" | _wtype ;;
+		OTP) printf '%s' "$(_get_otp "$passentry")" | _wtype ;;
 		"$AUTOTYPE_FIELD") autotype ;;
-		*) printf '%s' "${fields_map[${field}]}" | do_type ;;
+		*) printf '%s' "${fields_map[${field}]}" | _wtype ;;
 	esac
 }
 
