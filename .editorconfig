@@ -10,6 +10,3 @@ trim_trailing_whitespace = true
 
 [Makefile]
 indent_style = tab
-
-[*.org]
-tab_width = 8
