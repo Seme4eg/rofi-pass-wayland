@@ -263,7 +263,8 @@ _type() {
 	}
 
 	autotype() {
-		wpress_key() { wtype -k "$1"; }
+		# hold key for 50ms. Sometimes 'wtype -k "$1"' is too fast for programs
+		wpress_key() { wtype -P "$1" -s 50 -p "$1"; }
 
 		for word in ${fields_map["$AUTOTYPE_FIELD"]}; do
 			case "$word" in
