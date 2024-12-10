@@ -66,8 +66,8 @@ SomeField: foobar
 AnotherField: barfoo
 url: http://my.url.foo
 # self-explanatory - :tab, :space (might be useful for checkboxes), :enter
-# :delay - sleep before proceeding further
-# :otp - generate and type an OTP
+# :delay / :sleep - sleep before proceeding further
+# :otp / otp - generate and type an OTP
 # path - fill in path of that password entry (in this case
 #   mail/gmail/john@gmail.com)
 autotype: SomeField :tab user :tab AnotherField :tab pass :space :enter

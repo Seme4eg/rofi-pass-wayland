@@ -270,9 +270,9 @@ _type() {
 			case "$word" in
 				":tab") wpress_key Tab ;;
 				":space") wpress_key space ;;
-				":delay") sleep "${delay}" ;;
+				":delay" | ":sleep") sleep "${delay}" ;;
 				":enter") wpress_key Return ;;
-				":otp") printf '%s' "$(_get_otp "$passentry")" | _wtype ;;
+				":otp" | "otp") printf '%s' "$(_get_otp "$passentry")" | _wtype ;;
 				"pass") printf '%s' "${fields_map[pass]}" | _wtype ;;
 				"path")
 					printf '%s' "${passentry}" | rev | cut -d'/' -f1 | rev | _wtype
