@@ -259,19 +259,20 @@ _type() {
 
 	_wtype() {
 		sleep $wait              # delay before executing the typing sequence
-		wtype -d ${type_delay} - # delay before every key type
+		{ echo typedelay ${type_delay}; echo type $(cat); } | dotool # delay before every key type
 	}
+
 
 	autotype() {
 		# hold key for 50ms. Sometimes 'wtype -k "$1"' is too fast for programs
-		wpress_key() { wtype -P "$1" -s 50 -p "$1"; }
+		wpress_key() { { echo keydown "$1"; echo keydelay 50; echo keyup "$1"; } | dotool; }
 
 		for word in ${fields_map["$AUTOTYPE_FIELD"]}; do
 			case "$word" in
-				":tab") wpress_key Tab ;;
-				":space") wpress_key space ;;
+				":tab") wpress_key tab  ;;
+				":space") wpress_key space  ;;
 				":delay" | ":sleep") sleep "${delay}" ;;
-				":enter") wpress_key Return ;;
+				":enter") wpress_key enter  ;;
 				":otp" | "otp") printf '%s' "$(_get_otp "$passentry")" | _wtype ;;
 				"pass") printf '%s' "${fields_map[pass]}" | _wtype ;;
 				"path")
@@ -282,7 +283,7 @@ _type() {
 			esac
 		done
 
-		[[ ${auto_enter} == "true" ]] && wpress_key Return
+		[[ ${auto_enter} == "true" ]] && wpress_key enter
 	}
 
 	case "$field" in
