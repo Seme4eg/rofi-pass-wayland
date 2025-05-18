@@ -605,7 +605,7 @@ populate_fields_map() {
 
 	# get an array of password file fields like url: user: and custom ones
 	local -a password_temp
-	mapfile -t password_temp < <(pass show "$passentry")
+	mapfile -t password_temp <<< "$output"
 
 	fields_map["pass"]=${password_temp[0]}
 
