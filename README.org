@@ -13,7 +13,7 @@ single-file script.
 
 Password entry submenu:
 
-[[./assets/demo.png]]
+[[./assets/submenu.png]]
 
 _Features_:
 - Create / Read / Update / Delete / move / copy password store entries
