@@ -483,19 +483,21 @@ insert_entry() {
 	user=$(printf '%s\n' "${users[@]}" | _rofi -theme-str "$placeholder")
 	assert_status $?
 
-	placeholder=$(wrap_placeholder "Type password or hit Enter to generate one")
-	pw=$(printf '%s' "Generate" | _rofi -password -theme-str "$placeholder")
-	assert_status $?
-
-	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}")
+	local -a additional_content
 
 	if is_valid_url "$clipboard"; then
 		placeholder=$(wrap_placeholder "Edit the url from clipboard (Control+Space to edit)")
 		url=$(printf '%s' "$clipboard" | _rofi -format 'f' -theme-str "$placeholder")
 		assert_status $?
 		[ -z "$url" ] && url="$clipboard"
-		pass_content+=("${URL_FIELD}: ${url}")
+		additional_content=("${URL_FIELD}: ${url}")
 	fi
+
+	placeholder=$(wrap_placeholder "Type password or hit Enter to generate one")
+	pw=$(printf '%s' "Generate" | _rofi -password -theme-str "$placeholder")
+	assert_status $?
+
+	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}" "${additional_content[@]}")
 
 	notify_w "Creating password entry $path ..."
 	printf '%s\n' "${pass_content[@]}" | pass insert -m "${path}" >/dev/null &
