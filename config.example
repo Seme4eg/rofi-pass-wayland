@@ -32,7 +32,9 @@ type_delay=12
 edit_new_pass="true"
 # set to ':basename' for user field to be set to password basename
 default_user="$(whoami)"
-default_user2=""
+# users that you will see as an option to choose when creating new password.
+# Space separated.
+users_list="some@mail.com another@gmail.com localuser"
 
 ## Misc settings
 

@@ -40,7 +40,9 @@ type_delay=12
 edit_new_pass="true"
 # set to ':basename' for user field to be set to password basename
 default_user="$(whoami)"
-default_user2=""
+# users that you will see as an option to choose when creating new password.
+# Space separated.
+users_list=""
 
 ## Misc settings
 
@@ -478,7 +480,12 @@ insert_entry() {
 	[[ "$_user" == ":basename" ]] && _user="$(basename "$path")"
 
 	users=("$_user" "${USER}")
-	[ -n "$default_user2" ] && users+=("$default_user2")
+	if [ -n "$users_list" ]; then
+		original_ifs="$IFS"
+		IFS=' ' read -r -a split_array <<<"$users_list"
+		users+=("${split_array[@]}")
+		IFS="$original_ifs"
+	fi
 	placeholder=$(wrap_placeholder "Enter username ...")
 	user=$(printf '%s\n' "${users[@]}" | _rofi -theme-str "$placeholder")
 	assert_status $?
