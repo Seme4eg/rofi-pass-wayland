@@ -216,7 +216,7 @@ entry_menu() {
 		args+=(-kb-custom-8 "$kb_browse_url")
 	fi
 
-	if command -v qrencode; then
+	if command -v qrencode &> /dev/null; then
 		actions+=("$gen_qr")
 		args+=(-kb-custom-9 "$kb_qrcode")
 	fi
@@ -542,7 +542,7 @@ generate_qr() {
 	local passentry="$1"
 	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
 
-	if ! command -v qrencode; then
+	if ! command -v qrencode &> /dev/null; then
 		printf '%s\n' "qrencode not found" | _rofi
 		assert_status $?
 		main_menu
