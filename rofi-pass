@@ -246,7 +246,7 @@ entry_menu() {
 	case $action in
 		10 | "$show") show_entry ;;
 		11 | "$type_menu") _type "$passentry" menu ;;
-		12 | "$copy_menu") _copy menu ;;
+		12 | "$copy_menu") _copy menu "$passentry" ;;
 		13 | "$rename") move_entry "$passentry" ;;
 		"$copy") copy_entry "$passentry" ;;
 		14 | "$delete") remove_entry "$passentry" ;;
@@ -334,7 +334,7 @@ _copy() {
 
 			assert_status $?
 
-			_copy "$field"
+			_copy "$field" "$passentry"
 			;;
 		pass)
 			pass -c "$passentry"
