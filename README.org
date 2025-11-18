@@ -32,8 +32,8 @@ this script to see all available flags.
 ** Dependencies
 - [[http://www.passwordstore.org/][ZX2C4 pass]]
 - [[https://github.com/lbonn/rofi][rofi-wayland]]
-- wtype
-- wl-clipboard
+- [[https://github.com/atx/wtype][wtype]]
+- [[https://github.com/bugaevc/wl-clipboard][wl-clipboard]]
 - [[https://fukuchi.org/works/qrencode/][qrencode]] (optional: for generating and displaying pass qrcode)
 - [[https://github.com/tadfisher/pass-otp][pass-otp]] (optional: for OTPs)
 
