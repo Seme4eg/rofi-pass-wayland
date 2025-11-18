@@ -83,6 +83,13 @@ _rofi() { rofi -no-auto-select -i -dmenu "$@"; }
 
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
+# Function that runs on successful password store change.
+# I personally use it for syncing my pass to other machines.
+# Define in config file as a sh/bash func.
+_store_changed_hook() {
+	:
+}
+
 _generate_pass() { pass generate --clip --in-place "$@" >/dev/null; }
 
 _get_otp() { pass otp "$@"; }
@@ -216,7 +223,7 @@ entry_menu() {
 		args+=(-kb-custom-8 "$kb_browse_url")
 	fi
 
-	if command -v qrencode &> /dev/null; then
+	if command -v qrencode &>/dev/null; then
 		actions+=("$gen_qr")
 		args+=(-kb-custom-9 "$kb_qrcode")
 	fi
@@ -348,6 +355,7 @@ move_entry() {
 	notify_w "Moving $1 to $path ..."
 	if pass mv "$1" "$path"; then
 		notify_w "Successfully moved $1 to $path"
+		(_store_changed_hook) &
 	else
 		notify_w "Failed to move $1 to $path"
 	fi
@@ -382,6 +390,7 @@ remove_entry() {
 			(
 				if pass rm --force "$1"; then
 					notify_w "Successfully deleted $1"
+					(_store_changed_hook) &
 				else
 					notify_w "Failed to delete $1"
 				fi
@@ -395,6 +404,7 @@ edit_entry() {
 	notify_w "Updating $1 ..."
 	if pass edit "${1}"; then
 		notify_w "Successfully updated $1"
+		(_store_changed_hook) &
 	else
 		notify_w "Failed to update $1"
 	fi
@@ -424,7 +434,10 @@ generate_pass() {
 	[ -z "$silent" ] && notify_w "Generating passwrod for $passentry ..."
 
 	if _generate_pass "${args[@]}"; then
-		[ -z "$silent" ] && notify_w "Successfully generated password for $passentry"
+		if [ -z "$silent" ]; then
+			notify_w "Successfully generated password for $passentry"
+			(_store_changed_hook) &
+		fi
 	else
 		[ -z "$silent" ] && notify_w "Failed to generate password for $passentry"
 		return 1
@@ -520,6 +533,7 @@ insert_entry() {
 		fi
 		[[ $edit_new_pass == "true" ]] && pass edit "${path}"
 		notify_w "Password entry $path successfully inserted"
+		(_store_changed_hook) &
 	else
 		notify_w "Failed to insert new password entry $path. Is password store initialized?"
 	fi
@@ -542,7 +556,7 @@ generate_qr() {
 	local passentry="$1"
 	local qrcode_path="$HOME/.cache/rofi/temp_pass_qr.png"
 
-	if ! command -v qrencode &> /dev/null; then
+	if ! command -v qrencode &>/dev/null; then
 		printf '%s\n' "qrencode not found" | _rofi
 		assert_status $?
 		main_menu
@@ -615,7 +629,7 @@ populate_fields_map() {
 
 	# get an array of password file fields like url: user: and custom ones
 	local -a password_temp
-	mapfile -t password_temp <<< "$output"
+	mapfile -t password_temp <<<"$output"
 
 	fields_map["pass"]=${password_temp[0]}
 

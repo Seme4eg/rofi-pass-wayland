@@ -75,6 +75,10 @@ _rofi() { rofi -no-auto-select -i -dmenu "$@"; }
 
 _notify() { notify-send -e "rofi-pass" "$1"; }
 
+_store_changed_hook() {
+	pass git pull --rebase && pass git push
+}
+
 _generate_pass() { pass generate --clip --in-place "$@" > /dev/null; }
 
 _get_otp() { pass otp "$@"; }
