@@ -75,7 +75,7 @@ kb_generate="Alt+I"
 
 kb_browse_url="Alt+U"
 kb_qrcode="Alt+q"
-kb_switch_root="Alt+bracketright" # ]
+kb_switch_root="Alt+bracketleft" # [
 
 # --- Customisable functions ---
 
@@ -599,7 +599,7 @@ help_menu() {
 		---
 		${kb_browse_url}: Browse URL
 		${kb_qrcode}: Generate and display qrcode
-		${kb_switch_root}: Switch to previous password store root
+		${kb_switch_root}: Switch password store root
 	EOM
 
 	assert_status $?
