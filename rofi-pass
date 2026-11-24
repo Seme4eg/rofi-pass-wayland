@@ -128,9 +128,9 @@ main_menu() {
 		# 19 custom keybinds is max, custom statuses form rofi can be from 10 to 28
 	)
 
-	local placeholder
-	placeholder=$(wrap_placeholder "Current store: $PASSWORD_STORE_DIR")
-	args+=(-theme-str "$placeholder")
+	local -a placeholder
+	wrap_placeholder placeholder "Current store: $PASSWORD_STORE_DIR"
+	args+=("${placeholder[@]}")
 
 	local passentry
 	passentry="$(passls | _rofi "${args[@]}")"
@@ -231,9 +231,9 @@ entry_menu() {
 	# need to add back button the last
 	actions+=("$BACK_OPTION")
 
-	local placeholder
-	placeholder=$(wrap_placeholder "Choose action (displayed hotkeys also work from main menu)")
-	args+=(-theme-str "$placeholder")
+	local -a placeholder
+	wrap_placeholder placeholder "Choose action (displayed hotkeys also work from main menu)"
+	args+=("${placeholder[@]}")
 
 	local action
 	action=$(printf '%s\n' "${actions[@]}" | _rofi "${args[@]}")
@@ -302,10 +302,10 @@ _type() {
 			mapfile -t sorted_fields < <(get_sorted_fields)
 			sorted_fields+=("${AUTOTYPE_FIELD}")
 
-			placeholder=$(wrap_placeholder "Field to autotype")
+			wrap_placeholder placeholder "Field to autotype"
 			help_content="Global hotkeys: Pass ($kb_type_pass), User ($kb_type_user), OTP ($kb_type_otp), autotype ($kb_autotype)"
 			field=$(printf '%s\n' "${sorted_fields[@]}" |
-				_rofi -theme-str "$placeholder" -mesg "$help_content")
+				_rofi "${placeholder[@]}" -mesg "$help_content")
 			assert_status $?
 
 			_type "$passentry" "$field"
@@ -327,10 +327,10 @@ _copy() {
 		menu)
 			local sorted_fields=()
 			mapfile -t sorted_fields < <(get_sorted_fields)
-			placeholder=$(wrap_placeholder "Field to copy")
+			wrap_placeholder placeholder "Field to copy"
 			help_content="Global hotkeys: Pass ($kb_copy_pass), User ($kb_copy_user), OTP ($kb_copy_otp)"
 			field=$(printf '%s\n' "${sorted_fields[@]}" | sort |
-				_rofi -theme-str "$placeholder" -mesg "$help_content")
+				_rofi "${placeholder[@]}" -mesg "$help_content")
 
 			assert_status $?
 
@@ -347,8 +347,8 @@ _copy() {
 }
 
 move_entry() {
-	placeholder=$(wrap_placeholder "New path for $1")
-	path=$(passls | _rofi -format 'f' -theme-str "$placeholder")
+	wrap_placeholder placeholder "New path for $1"
+	path=$(passls | _rofi -format 'f' "${placeholder[@]}")
 	assert_status $?
 	echo "PASSWORD_STORE_DIR=${roots[$root_index]} pass mv -f $1 $path"
 
@@ -362,9 +362,9 @@ move_entry() {
 }
 
 copy_entry() {
-	local placeholder
-	placeholder=$(wrap_placeholder "Path for $1 copy")
-	path=$(passls | _rofi -theme-str "$placeholder")
+	local -a placeholder
+	wrap_placeholder placeholder "Path for $1 copy"
+	path=$(passls | _rofi "${placeholder[@]}")
 	assert_status $?
 
 	notify_w "Copying $1 to $path ..."
@@ -377,9 +377,9 @@ copy_entry() {
 
 remove_entry() {
 	local ask_content=("yes" "no")
-	local placeholder
-	placeholder=$(wrap_placeholder "Delete $1?")
-	ask=$(printf '%s\n' "${ask_content[@]}" | _rofi -theme-str "$placeholder")
+	local -a placeholder
+	wrap_placeholder placeholder "Delete $1?"
+	ask=$(printf '%s\n' "${ask_content[@]}" | _rofi "${placeholder[@]}")
 	assert_status $?
 
 	case $ask in
@@ -415,15 +415,15 @@ generate_pass() {
 	# pass anything as 2nd arg to suppress all notifications of this func
 	local silent="$2"
 
-	placeholder=$(wrap_placeholder "Password length (leave empty for pass default):")
-	length=$(printf '%s' "" | _rofi -theme-str "$placeholder")
+	wrap_placeholder placeholder "Password length (leave empty for pass default):"
+	length=$(printf '%s' "" | _rofi "${placeholder[@]}")
 	# don't 'exit' in this function since there are some cleanups than need to be
 	# done if this function fails
 	[ "$?" -eq 1 ] && return 1
 
-	placeholder=$(wrap_placeholder "Use symbols?")
+	wrap_placeholder placeholder "Use symbols?"
 	yesno=("yes" "no")
-	usesymbols=$(printf '%s\n' "${yesno[@]}" | _rofi -theme-str "$placeholder")
+	usesymbols=$(printf '%s\n' "${yesno[@]}" | _rofi "${placeholder[@]}")
 	[ "$?" -eq 1 ] && return 1
 
 	# compose args for generate command
@@ -452,8 +452,8 @@ show_entry() {
 	for key in "${!fields_map[@]}"; do lines+=("${key}: ${fields_map[$key]}"); done
 
 	content=("$(printf '%s\n' "${lines[@]}")" "$BACK_OPTION")
-	placeholder=$(wrap_placeholder "Enter: copy entry to clipboard")
-	selection=$(printf '%s\n' "${content[@]}" | _rofi -theme-str "$placeholder" -p "> ")
+	wrap_placeholder placeholder "Enter: copy entry to clipboard"
+	selection=$(printf '%s\n' "${content[@]}" | _rofi "${placeholder[@]}" -p "> ")
 	assert_status $?
 
 	field=$(printf '%s' "$selection" | cut -d':' -f 1)
@@ -468,8 +468,9 @@ show_entry() {
 
 insert_entry() {
 	clipboard=$(wl-paste)
+	wrap_placeholder placeholder "Enter name, must be unique ..."
 	# -format 'f' to count only user input and not what he pressed 'enter' on
-	local rofi_args=(-format 'f' -theme-str "$placeholder" -p "> ")
+	local rofi_args=(-format 'f' "${placeholder[@]}" -p "> ")
 
 	if ! is_valid_url "$clipboard"; then
 		help_content="Hint: Copy URL to clipboard before calling this menu."
@@ -479,7 +480,6 @@ insert_entry() {
 	# needs to be checked here since this f-n may be called directly from 'main'
 	cd "$PASSWORD_STORE_DIR" || exit
 
-	placeholder=$(wrap_placeholder "Enter name, must be unique ...")
 	path=$(passls | _rofi "${rofi_args[@]}")
 	assert_status $?
 
@@ -499,22 +499,22 @@ insert_entry() {
 		users+=("${split_array[@]}")
 		IFS="$original_ifs"
 	fi
-	placeholder=$(wrap_placeholder "Enter username ...")
-	user=$(printf '%s\n' "${users[@]}" | _rofi -theme-str "$placeholder")
+	wrap_placeholder placeholder "Enter username ..."
+	user=$(printf '%s\n' "${users[@]}" | _rofi "${placeholder[@]}")
 	assert_status $?
 
 	local -a additional_content
 
 	if is_valid_url "$clipboard"; then
-		placeholder=$(wrap_placeholder "Edit the url from clipboard (Control+Space to edit)")
-		url=$(printf '%s' "$clipboard" | _rofi -format 'f' -theme-str "$placeholder")
+		wrap_placeholder placeholder "Edit the url from clipboard (Control+Space to edit)"
+		url=$(printf '%s' "$clipboard" | _rofi -format 'f' "${placeholder[@]}")
 		assert_status $?
 		[ -z "$url" ] && url="$clipboard"
 		additional_content=("${URL_FIELD}: ${url}")
 	fi
 
-	placeholder=$(wrap_placeholder "Type password or hit Enter to generate one")
-	pw=$(printf '%s' "Generate" | _rofi -password -theme-str "$placeholder")
+	wrap_placeholder placeholder "Type password or hit Enter to generate one"
+	pw=$(printf '%s' "Generate" | _rofi -password "${placeholder[@]}")
 	assert_status $?
 
 	pass_content=("${pw}" "${USERNAME_FIELD}: ${user}" "${additional_content[@]}")
@@ -576,9 +576,9 @@ window{
 }
 
 help_menu() {
-	local placeholder
-	placeholder=$(wrap_placeholder "Hint: All hotkeys are configurable in config file")
-	_rofi -theme-str "$placeholder" -mesg "Press Return to exit this menu" <<-EOM
+	local -a placeholder
+	wrap_placeholder placeholder "Hint: All hotkeys are configurable in config file"
+	_rofi "${placeholder[@]}" -mesg "Press Return to exit this menu" <<-EOM
 		${kb_type_field}: Type field / autotype
 		${kb_type_pass}: Type password
 		${kb_type_user}: Type username
@@ -684,8 +684,11 @@ passls() {
 	return 0
 }
 
-# FIXME: how to move the '-theme-str' part in this funciton
-wrap_placeholder() { echo "#entry { placeholder: \"$1\"; }"; }
+# Sets array named $1 to rofi args showing $2 as entry placeholder
+wrap_placeholder() {
+	local -n _wp_out=$1
+	_wp_out=(-theme-str "#entry { placeholder: \"$2\"; }")
+}
 
 # Returns sorted keys for current password entry with 'autotype' key removed.
 # Fields like 'user', 'url', etc
